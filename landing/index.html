@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TICO FINANCE | Mortgage Architect</title>
+<!-- [חסר] meta description -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#2E8B57; --green-dark:#1F6B42; --navy:#0F243E; --gold:#D4AF37; --light:#EEF6F1;
+  --text:#1E2B36; --grey:#5B6B77;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:Heebo,Arial,sans-serif;color:var(--text);background:#fff;line-height:1.6;font-size:17px;padding-bottom:84px}
+h1,h2{font-family:Rubik,Heebo,sans-serif;color:var(--navy);line-height:1.25}
+.wrap{max-width:560px;margin:0 auto;padding:0 20px}
+
+/* סימון שדות חסרים */
+.todo{background:#FFF6CC;border:1.5px dashed #B8920A;color:#6B5200;border-radius:6px;padding:2px 8px;font-size:.92em;font-weight:500}
+.todo.block{display:block;padding:14px 16px;text-align:center}
+
+header{padding:20px 0 8px}
+header img{display:block;width:210px;max-width:62%;height:auto}
+
+.hero{background:var(--light);padding:28px 0 32px;border-bottom:4px solid var(--gold)}
+.hero h1{font-size:30px;font-weight:700;margin-bottom:14px}
+.hero p{color:var(--text);font-size:18px}
+
+section{padding:32px 0}
+.offer{border-right:5px solid var(--green);background:#fff;padding:4px 18px}
+.offer h2{font-size:22px;margin-bottom:8px;color:var(--green-dark)}
+
+.form-card{background:var(--light);border-radius:14px;padding:24px 20px}
+.form-card h2{font-size:22px;margin-bottom:16px}
+label{display:block;font-weight:500;margin-bottom:6px}
+input[type=text],input[type=tel]{width:100%;font:inherit;padding:14px;border:1.5px solid #C9D8CE;border-radius:10px;background:#fff;margin-bottom:16px}
+input:focus{outline:3px solid rgba(46,139,87,.35);border-color:var(--green)}
+.btn{display:block;width:100%;text-align:center;font:inherit;font-weight:700;font-size:18px;padding:15px;border-radius:10px;border:0;cursor:pointer;text-decoration:none}
+.btn-submit{background:var(--green);color:#fff}
+.btn-submit:hover{background:var(--green-dark)}
+.btn-wa{background:#fff;color:var(--green-dark);border:2px solid var(--green);margin-top:12px}
+.status{margin-top:12px;font-size:15px}
+.status.ok{color:var(--green-dark)}
+.status.err{color:#9B2C2C}
+.hp{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.hp input{margin:0}
+
+footer{background:var(--navy);color:#C9D3DC;padding:26px 0 30px;font-size:14px}
+footer p+p{margin-top:10px}
+footer a{color:#fff}
+
+/* פס וואטסאפ דביק בנייד */
+.sticky{position:fixed;inset:auto 0 0 0;background:#fff;border-top:1px solid #DCE6DF;padding:10px 16px;z-index:10}
+.sticky .btn{background:#25D366;color:#073B1B;border:0;margin:0;max-width:560px;margin-inline:auto}
+
+@media (min-width:700px){
+  body{font-size:18px;padding-bottom:0}
+  .hero h1{font-size:38px}
+  .sticky{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <img src="assets/logo-mortgage-architect.png" alt="TICO FINANCE – Mortgage Architect" width="210" height="55">
+  </div>
+</header>
+
+<main>
+  <!-- כותרת: מדברת אל הרגע שבו הלקוח פונה -->
+  <div class="hero">
+    <div class="wrap">
+      <h1><span class="todo">[חסר: כותרת – המשפט שמדבר אל הרגע שבו הלקוח פונה]</span></h1>
+      <p><span class="todo">[חסר: משפט משנה קצר, אם רוצים]</span></p>
+    </div>
+  </div>
+
+  <!-- הצעה אחת -->
+  <section>
+    <div class="wrap">
+      <div class="offer">
+        <h2><span class="todo">[חסר: ההצעה – מה הלקוח מקבל כשהוא משאיר פרטים]</span></h2>
+        <p><span class="todo">[חסר: שורה או שתיים שמפרטות את ההצעה. בלי מספרים או הבטחות שלא אושרו]</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- טופס -->
+  <section id="lead" style="padding-top:0">
+    <div class="wrap">
+      <form class="form-card" id="leadForm" novalidate>
+        <h2>השאירו פרטים ונחזור אליכם</h2>
+        <label for="name">שם</label>
+        <input type="text" id="name" name="name" autocomplete="name" required>
+        <label for="phone">טלפון</label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" dir="ltr" style="text-align:right" required>
+        <div class="hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
+        <button class="btn btn-submit" type="submit">שלחו לי פרטים</button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <a class="btn btn-wa" id="waInline" href="#" target="_blank" rel="noopener">או כתבו לנו בוואטסאפ</a>
+        <p style="margin-top:14px;font-size:14px;color:var(--grey)"><span class="todo">[חסר: קישור למדיניות פרטיות / הסכמה ליצירת קשר, אם נדרש]</span></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <!-- כתב ויתור: נוסח טיוטה כללי, לא כולל מספרים או הבטחות. לאישור לפני העלאה -->
+    <p>המידע בדף זה הוא כללי בלבד, אינו מהווה ייעוץ אישי או הצעה מחייבת, והתאמת פתרון כלשהו כפופה לבדיקה פרטנית ולאישור הגורם המממן.</p>
+    <p><span class="todo">[חסר: שם העסק המלא, פרטי רישיון/הסמכה אם קיימים, ופרטי קשר]</span></p>
+  </div>
+</footer>
+
+<div class="sticky"><a class="btn" id="waSticky" href="#" target="_blank" rel="noopener">שלחו הודעה בוואטסאפ</a></div>
+
+<script>
+/* ===== הגדרות להשלמה ===== */
+var WA_NUMBER   = "";  // [חסר] מספר וואטסאפ בפורמט בינלאומי ללא פלוס, למשל 9725XXXXXXXX
+var WA_TEXT     = "";  // [חסר] נוסח ההודעה המוכנה מראש
+var FORM_ENDPOINT = ""; // [חסר] כתובת שמקבלת את הליד (POST, JSON: name, phone)
+/* ======================== */
+
+var statusEl = document.getElementById("status");
+function waLink(){ return "https://wa.me/" + WA_NUMBER + (WA_TEXT ? "?text=" + encodeURIComponent(WA_TEXT) : ""); }
+["waInline","waSticky"].forEach(function(id){
+  var a = document.getElementById(id);
+  if (WA_NUMBER) { a.href = waLink(); }
+  else a.addEventListener("click", function(e){
+    e.preventDefault();
+    statusEl.className = "status err";
+    statusEl.textContent = "[חסר: מספר וואטסאפ]";
+    document.getElementById("lead").scrollIntoView();
+  });
+});
+
+document.getElementById("leadForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var f = e.target, name = f.name.value.trim(), phone = f.phone.value.trim();
+  statusEl.className = "status err";
+  if (f.website.value) return;
+  if (!name) { statusEl.textContent = "נא למלא שם"; f.name.focus(); return; }
+  if (!/^[0-9+\-\s()]{9,15}$/.test(phone)) { statusEl.textContent = "נא למלא מספר טלפון תקין"; f.phone.focus(); return; }
+  if (!FORM_ENDPOINT) { statusEl.textContent = "[חסר: כתובת לקבלת הלידים – הטופס עדיין לא מחובר]"; return; }
+  fetch(FORM_ENDPOINT, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name:name, phone:phone})})
+    .then(function(r){ if(!r.ok) throw 0; statusEl.className="status ok"; statusEl.textContent="תודה, הפרטים התקבלו."; f.reset(); })
+    .catch(function(){ statusEl.textContent = "אירעה תקלה בשליחה. אפשר לנסות שוב או לכתוב לנו בוואטסאפ."; });
+});
+</script>
+</body>
+</html>
