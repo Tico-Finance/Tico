@@ -26,3 +26,276 @@ body {
   color: var(--brand-text);
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  /* מסתיר ווידג'טים צפים שדפדוקי Vercel Preview מזריקים לדף (למשל
+     כפתור ה-Toolbar) - כדי שלא יופיעו כעיגול צף באמצע ה-PDF. */
+  vercel-toolbar,
+  vercel-live-feedback,
+  #vercel-toolbar,
+  #vercel-live-feedback,
+  [id^="vercel-"],
+  [class^="vercel-"],
+  [data-vercel-toolbar] {
+    display: none !important;
+  }
+
+  section,
+  table,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* דוח PDF מודפס - מבנה ועיצוב זהים לדוח הסקירה השנתי (tico-annual-report),
+   כדי שהמסמך שיוצא ללקוח ייראה כמו שאר החומרים הממותגים של Tico Finance. */
+.tico-report {
+  direction: rtl;
+}
+.tico-report-letterhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #2e8b57;
+}
+.tico-report-brand-mark {
+  height: 40px;
+  width: auto;
+}
+.tico-report-doc-meta {
+  text-align: left;
+  font-size: 13px;
+  color: #5a5a7a;
+  line-height: 1.8;
+}
+.tico-report-doc-meta strong {
+  color: #1a1a2e;
+  font-weight: 700;
+}
+.tico-report-title-block {
+  padding: 24px 0 20px;
+}
+.tico-report-eyebrow {
+  font-size: 0.8rem;
+  color: #2e8b57;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.tico-report-title {
+  font-weight: 800;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin: 0 0 10px;
+  color: #1a1a2e;
+}
+.tico-report-subtitle {
+  font-size: 14px;
+  color: #5a5a7a;
+  max-width: 60ch;
+  line-height: 1.6;
+}
+.tico-report-section {
+  margin-top: 28px;
+}
+.tico-report-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #c8ddd2;
+  padding-bottom: 8px;
+}
+.tico-report-section-head h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: #1a1a2e;
+}
+.tico-report-section-note {
+  font-size: 12px;
+  color: #818c82;
+}
+.tico-report-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--tico-report-cols, 4), 1fr);
+  gap: 10px;
+}
+.tico-report-card {
+  background: #ffffff;
+  border: 1.5px solid #c8ddd2;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 36, 62, 0.04), 0 10px 26px rgba(15, 36, 62, 0.07);
+  padding: 12px 14px;
+}
+.tico-report-card-k {
+  font-size: 11px;
+  color: #818c82;
+  margin-bottom: 4px;
+}
+.tico-report-card-v {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #1a1a2e;
+}
+.tico-report-hero-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
+}
+.tico-report-hero-main {
+  background: linear-gradient(145deg, #1d5e3a 0%, #2e8b57 60%, #3aa869 100%);
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.tico-report-hero-label {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.tico-report-hero-number {
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.tico-report-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+.tico-report-hero-sub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+.tico-report-hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tico-report-hero-stats .tico-report-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.tico-report-table-wrap {
+  overflow-x: auto;
+  border: 1.5px solid #c8ddd2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 36, 62, 0.04), 0 10px 26px rgba(15, 36, 62, 0.07);
+}
+.tico-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 480px;
+}
+.tico-report-table th,
+.tico-report-table td {
+  padding: 8px 10px;
+  text-align: right;
+}
+.tico-report-table thead th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #818c82;
+  font-weight: 700;
+  background: #eff7f2;
+  border-bottom: 1px solid #c8ddd2;
+}
+.tico-report-table tbody tr + tr td {
+  border-top: 1px dotted #c8ddd2;
+}
+.tico-report-num {
+  font-variant-numeric: tabular-nums;
+}
+.tico-report-row-label {
+  font-weight: 700;
+}
+.tico-report-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+}
+.tico-report-badge-good {
+  color: #1d5e3a;
+  background: rgba(46, 139, 87, 0.11);
+}
+.tico-report-badge-warn {
+  color: #8a6d10;
+  background: rgba(184, 134, 11, 0.13);
+}
+.tico-report-badge-bad {
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.11);
+}
+.tico-report-closing {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid #c8ddd2;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.tico-report-closing p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5a5a7a;
+  max-width: 52ch;
+  margin: 0;
+}
+.tico-report-signoff {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: #1a1a2e;
+}
+.tico-report-signoff span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2e8b57;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tico-report-disclaimer {
+  margin-top: 20px;
+  font-size: 10.5px;
+  color: #818c82;
+  line-height: 1.7;
+  border-top: 1px dashed #c8ddd2;
+  padding-top: 12px;
+}
