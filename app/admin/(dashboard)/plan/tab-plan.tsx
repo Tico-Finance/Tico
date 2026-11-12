@@ -2,7 +2,7 @@
 
 import type { PlanSettings } from "@/lib/business-plan/types";
 import type { Params, Plan, TypePlan } from "@/lib/business-plan/model";
-import { MONTHS, dec, kfmt, money, nf } from "@/lib/business-plan/format";
+import { MONTHS, dec, kfmt, money, nf, cnt } from "@/lib/business-plan/format";
 import { WPM } from "@/lib/business-plan/dates";
 import { BarChart, LineChart } from "./charts";
 import { Card, Legend, Num, Pill, Seg } from "./ui";
@@ -49,7 +49,7 @@ export default function TabPlan({
     [1, "הוצאות", costMin === costMax ? `${money(costMin)} בחודש` : `${money(costMin)} עד ${money(costMax)}`],
     [2, "סוגי תיקים", `${p.types.length} סוגים`],
     [3, "זמן וגבייה", `${Math.round(P1.upfrontShare * 100)}% מראש`],
-    [4, "המרות", `${dec(avgConv)}% ליד להגשה`],
+    [4, "המרות", `${dec(avgConv)}% ליד ללקוח`],
     [5, "לידים ותוכן", `${p.chans.length} ערוצים`],
   ];
 
@@ -97,10 +97,10 @@ export default function TabPlan({
         <h2 className="text-xl font-extrabold text-primary">מה צריך לקרות כדי שזה יקרה</h2>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
           {[
-            ["תיקים לסגור", dec(cur.cases), `${N === 12 ? "בשנה" : "בתקופה"}, בערך ${dec(cur.cases / N)} בחודש`],
-            ["לידים חדשים", dec(w.leads), "בשבוע"],
-            ["פגישות", dec(w.meet), "בשבוע"],
-            ["תוכן לפרסם", dec(posts + vids), "פוסטים וסרטונים בשבוע"],
+            ["לקוחות חדשים", cnt(cur.cases), `${N === 12 ? "בשנה" : "בתקופה"}, בערך ${cnt(cur.cases / N)} בחודש`],
+            ["לידים חדשים", cnt(w.leads), "בשבוע"],
+            ["פגישות", cnt(w.meet), "בשבוע"],
+            ["תוכן לפרסם", cnt(posts + vids), "פוסטים וסרטונים בשבוע"],
           ].map(([t, v, s]) => (
             <div key={t} className="flex flex-col rounded-2xl border border-black/5 bg-surface p-5">
               <b className="num text-4xl font-extrabold leading-none">{v}</b>
@@ -169,7 +169,7 @@ export default function TabPlan({
                 <div className="h-3.5 overflow-hidden rounded-full max-sm:order-3 max-sm:col-span-2" style={{ background: "var(--pl-soft)" }}>
                   <i className="block h-full rounded-full" style={{ width: `${(t.cases / maxC) * 100}%`, background: tcolor(t.ix) }} />
                 </div>
-                <b className="num min-w-[2.4ch] text-end text-2xl font-extrabold">{dec(t.cases)}</b>
+                <b className="num min-w-[2.4ch] text-end text-2xl font-extrabold">{cnt(t.cases)}</b>
               </div>
             ))}
           </div>
@@ -187,19 +187,19 @@ export default function TabPlan({
             <table className="pl-table">
               <thead><tr><th>ערוץ</th><th>לידים בשנה</th><th>יחידות בשנה</th><th>קצב</th><th>עלות בשנה</th><th>שעות בשבוע</th></tr></thead>
               <tbody>
-                <tr><th scope="row">הפניות מלקוחות קיימים</th><td className="v"><Num>{dec(cur.refLeads)}</Num></td><td className="v">—</td><td className="text-xs text-foreground/55"><Num>{p.ref}</Num> לכל תיק חתום</td><td className="v"><Num>{money(0)}</Num></td><td className="v">—</td></tr>
+                <tr><th scope="row">הפניות מלקוחות קיימים</th><td className="v"><Num>{cnt(cur.refLeads)}</Num></td><td className="v">—</td><td className="text-xs text-foreground/55"><Num>{p.ref}</Num> לכל תיק חתום</td><td className="v"><Num>{money(0)}</Num></td><td className="v">—</td></tr>
                 {cur.chans.map((c) => (
                   <tr key={c.n}>
                     <th scope="row">{c.n}</th>
-                    <td className="v"><Num>{dec(c.leads)}</Num></td>
-                    <td className="v"><Num>{dec(c.units)}</Num> {c.unit}</td>
-                    <td>{c.units / 52 >= 1 ? <><Num>{dec(c.units / 52)}</Num> בשבוע</> : c.units > 0 ? <>אחת ל-<Num>{Math.round(52 / c.units)}</Num> שבועות</> : "0"}</td>
+                    <td className="v"><Num>{cnt(c.leads)}</Num></td>
+                    <td className="v"><Num>{cnt(c.units)}</Num> {c.unit}</td>
+                    <td>{c.units / 52 >= 1 ? <><Num>{cnt(c.units / 52)}</Num> בשבוע</> : c.units > 0 ? <>אחת ל-<Num>{Math.round(52 / c.units)}</Num> שבועות</> : "0"}</td>
                     <td className="v"><Num>{money(c.cost)}</Num></td>
                     <td className="v"><Num>{dec(c.hours / 52)}</Num></td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr><th scope="row">סה״כ</th><td><Num>{dec(cur.leads)}</Num></td><td /><td /><td><Num>{money(cur.marketing)}</Num></td><td><Num>{dec(w.content)}</Num></td></tr></tfoot>
+              <tfoot><tr><th scope="row">סה״כ</th><td><Num>{cnt(cur.leads)}</Num></td><td /><td /><td><Num>{money(cur.marketing)}</Num></td><td><Num>{dec(w.content)}</Num></td></tr></tfoot>
             </table>
           </Card>
           <Card>
@@ -225,34 +225,34 @@ export default function TabPlan({
           </Card>
         </More>
 
-        <More title="המשפך ושבוע רגיל" sub="מליד להסכם ולהגשה, ומה זה אומר לשבוע אחד">
+        <More title="המשפך ושבוע רגיל" sub="מליד ללקוח, ומה זה אומר לשבוע אחד">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4">
             <Card>
               <h3 className="mb-3.5 font-bold">שנה קדימה</h3>
               <div className="flex flex-col gap-2.5">
-                {([["לידים", cur.leads, null], ["פגישות", cur.meet, cur.meet / cur.leads], ["הסכמי התקשרות", cur.sub, cur.sub / cur.meet], ["הגשות לבנקים", cur.cases, cur.cases / cur.sub]] as [string, number, number | null][]).map(([l, v, r]) => (
+                {([["לידים", cur.leads, null], ["פגישות", cur.meet, cur.meet / cur.leads], ["לקוחות חדשים", cur.cases, cur.cases / cur.meet]] as [string, number, number | null][]).map(([l, v, r]) => (
                   <div key={l} className="grid grid-cols-[110px_1fr_140px] items-center gap-3 max-sm:grid-cols-[1fr_auto]">
                     <b className="text-sm">{l}</b>
                     <div className="h-6 overflow-hidden rounded max-sm:order-3 max-sm:col-span-2" style={{ background: "var(--pl-soft)" }}>
                       <i className="block h-full rounded-s" style={{ width: `${(v / cur.leads) * 100}%`, background: "var(--pl-accent)" }} />
                     </div>
-                    <span className="text-xs text-foreground/70"><b className="num text-sm text-foreground">{nf(v)}</b>{r != null && <> · המרה <Num>{Math.round(r * 100)}%</Num></>}</span>
+                    <span className="text-xs text-foreground/70"><b className="num text-sm text-foreground">{cnt(v)}</b>{r != null && <> · המרה <Num>{Math.round(r * 100)}%</Num></>}</span>
                   </div>
                 ))}
-                <p className="text-xs text-foreground/55"><Num>{dec(cur.refLeads)}</Num> מתוך הלידים מגיעים מהפניות, והשאר מהערוצים.</p>
+                <p className="text-xs text-foreground/55"><Num>{cnt(cur.refLeads)}</Num> מתוך הלידים מגיעים מהפניות, והשאר מהערוצים.</p>
               </div>
             </Card>
             <Card>
               <h3 className="mb-3.5 font-bold">שבוע רגיל</h3>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5">
-                {([["לידים חדשים", w.leads], ["פגישות", w.meet], ["חתימות על הסכם", w.sub], ["הגשות לבנקים", w.cases]] as [string, number][]).map(([l, v]) => (
+                {([["לידים חדשים", w.leads], ["פגישות", w.meet], ["לקוחות חדשים", w.cases]] as [string, number][]).map(([l, v]) => (
                   <div key={l} className="rounded-lg p-3" style={{ background: "var(--pl-soft)" }}>
-                    <span className="block text-xs text-foreground/70">{l}</span><b className="text-lg"><Num>{dec(v)}</Num> בשבוע</b>
+                    <span className="block text-xs text-foreground/70">{l}</span><b className="text-lg"><Num>{cnt(v)}</Num> בשבוע</b>
                   </div>
                 ))}
                 <div className="rounded-lg p-3" style={{ background: "var(--pl-soft)" }}>
                   <span className="block text-xs text-foreground/70">בחודש</span>
-                  <b className="text-lg"><Num>{dec(w.leads * WPM)}</Num> לידים · <Num>{dec(w.cases * WPM)}</Num> הגשות</b>
+                  <b className="text-lg"><Num>{cnt(w.leads * WPM)}</Num> לידים · <Num>{cnt(w.cases * WPM)}</Num> לקוחות</b>
                 </div>
               </div>
             </Card>
@@ -260,7 +260,7 @@ export default function TabPlan({
         </More>
 
         <More title="כל סוג עסקה: ציר זמן ורווחיות" sub="מתי נכנס הכסף, ומה משתלם יותר לשעת עבודה">
-          <p className="text-sm text-foreground/60">ציר הזמן מראה מתי נכנס כסף מרגע שהליד מגיע. עיגול הוא גבייה, מעוין הוא הגשה.</p>
+          <p className="text-sm text-foreground/60">ציר הזמן מראה מתי נכנס כסף מרגע שהליד מגיע. עיגול הוא גבייה, מעוין הוא חתימה.</p>
           <Card className="overflow-x-auto">
             <table className="pl-table">
               <thead><tr><th>סוג תיק</th><th className="min-w-[300px]">ציר זמן (חודשים מהליד)</th><th>ממוצע עד כסף</th><th>שווי ליד</th><th>עמלה לשעה</th></tr></thead>
@@ -279,18 +279,18 @@ export default function TabPlan({
           </Card>
           <Card className="overflow-x-auto">
             <table className="pl-table">
-              <thead><tr><th>סוג תיק</th><th>עמלה</th><th>תיקים</th><th>הכנסה</th><th className="min-w-[110px]">חלק מההכנסה</th><th>לידים</th><th>פגישות</th><th>הסכמים</th></tr></thead>
+              <thead><tr><th>סוג תיק</th><th>עמלה</th><th>תיקים</th><th>הכנסה</th><th className="min-w-[110px]">חלק מההכנסה</th><th>לידים</th><th>פגישות</th></tr></thead>
               <tbody>
                 {ts.map((t) => (
                   <tr key={t.id}>
                     <th scope="row"><span className="me-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: tcolor(t.ix) }} />{t.n}</th>
-                    <td className="v"><Num>{money(t.fee)}</Num></td><td className="v"><Num>{dec(t.cases)}</Num></td><td className="v"><Num>{money(t.income)}</Num></td>
+                    <td className="v"><Num>{money(t.fee)}</Num></td><td className="v"><Num>{cnt(t.cases)}</Num></td><td className="v"><Num>{money(t.income)}</Num></td>
                     <td><span className="block h-2 min-w-[2px] rounded-sm" style={{ width: `${Math.max((t.income / cur.income) * 100, 1)}%`, background: tcolor(t.ix) }} /><span className="text-xs text-foreground/55"><Num>{Math.round((t.income / cur.income) * 100)}%</Num></span></td>
-                    <td className="v"><Num>{dec(t.leads)}</Num></td><td className="v"><Num>{dec(t.meet)}</Num></td><td className="v"><Num>{dec(t.sub)}</Num></td>
+                    <td className="v"><Num>{cnt(t.leads)}</Num></td><td className="v"><Num>{cnt(t.meet)}</Num></td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr><th scope="row">סה״כ</th><td><Num>{money(cur.avgFee)}</Num></td><td><Num>{dec(cur.cases)}</Num></td><td><Num>{money(cur.income)}</Num></td><td /><td><Num>{dec(cur.leads)}</Num></td><td><Num>{dec(cur.meet)}</Num></td><td><Num>{dec(cur.sub)}</Num></td></tr></tfoot>
+              <tfoot><tr><th scope="row">סה״כ</th><td><Num>{money(cur.avgFee)}</Num></td><td><Num>{cnt(cur.cases)}</Num></td><td><Num>{money(cur.income)}</Num></td><td /><td><Num>{cnt(cur.leads)}</Num></td><td><Num>{cnt(cur.meet)}</Num></td></tr></tfoot>
             </table>
           </Card>
         </More>
@@ -317,10 +317,9 @@ export default function TabPlan({
               <thead><tr><th>תוכנית חודשית · {SCEN.find((x) => x.k === cur.k)?.label}</th>{monthLabels.map((l) => <th key={l}>{l}</th>)}</tr></thead>
               <tbody>
                 {([
-                  ["לידים", (m: number) => dec(cur.tot.leads[m])],
-                  ["פגישות", (m: number) => dec(cur.tot.meet[m])],
-                  ["חתימות על הסכם", (m: number) => dec(cur.tot.sub[m])],
-                  ["הגשות", (m: number) => dec(cur.tot.signed[m])],
+                  ["לידים", (m: number) => cnt(cur.tot.leads[m])],
+                  ["פגישות", (m: number) => cnt(cur.tot.meet[m])],
+                  ["לקוחות חדשים", (m: number) => cnt(cur.tot.signed[m])],
                   ["הכנסה", (m: number) => kfmt(cur.tot.income[m]), true],
                   ["הוצאות", (m: number) => kfmt(cur.costM[m] + cur.marketing / N)],
                   ["נטו בחודש", (m: number) => kfmt(cur.tot.income[m] - cur.costM[m] - cur.marketing / N)],
@@ -339,13 +338,13 @@ export default function TabPlan({
               <thead><tr><th /> {plans.map((s, i) => <th key={s.k}><span className="mb-2 block h-1 rounded" style={{ background: SCEN[i].color }} /><span className="block text-xl font-extrabold text-foreground">{SCEN[i].label}</span></th>)}</tr></thead>
               <tbody>
                 {([
-                  ["תיקים שהוגשו", (s: Plan) => <Num key="a">{dec(s.cases)}</Num>],
+                  ["לקוחות חדשים", (s: Plan) => <Num key="a">{cnt(s.cases)}</Num>],
                   ["הכנסה שנתית (נכנסת לחשבון)", (s: Plan) => <Num key="b">{money(s.income)}</Num>],
                   ["הוצאות (קבועות, צוות ופרסום)", (s: Plan) => <Num key="c">{money(s.costs)}</Num>],
                   ["תוצאה בסוף השנה", (s: Plan) => <><Num>{money(s.net)}</Num> {s.net >= 0 ? <Pill tone="good">✓ רווח</Pill> : <Pill tone="bad">✕ גירעון</Pill>}</>, true],
                   ["הנקודה הנמוכה בשנה", (s: Plan) => (s.dip < 0 ? <><Num>{money(s.dip)}</Num> <span className="text-xs text-foreground/55">({endName(s.iMin)})</span></> : "אין")],
-                  ["לידים בשבוע", (s: Plan) => <Num key="d">{dec(s.wk.leads)}</Num>, true],
-                  ["פגישות בשבוע", (s: Plan) => <Num key="e">{dec(s.wk.meet)}</Num>],
+                  ["לידים בשבוע", (s: Plan) => <Num key="d">{cnt(s.wk.leads)}</Num>, true],
+                  ["פגישות בשבוע", (s: Plan) => <Num key="e">{cnt(s.wk.meet)}</Num>],
                   ["שעות תוכן ושיווק בשבוע", (s: Plan) => <Num key="f">{dec(s.wk.content)}</Num>],
                   [`סך שעות עבודה בשבוע (זמינות ${dec(p.hours)})`, (s: Plan) => <><Num>{dec(s.wk.total)}</Num> {s.wk.total <= p.hours ? <Pill tone="good">✓</Pill> : <Pill tone="bad">✕ חריגה</Pill>}</>],
                 ] as [string, (s: Plan) => React.ReactNode, boolean?][]).map(([l, f, sep]) => (
@@ -363,7 +362,7 @@ export default function TabPlan({
       <ul className="max-w-3xl list-disc ps-5 text-xs text-foreground/50">
         <li>ההכנסה נספרת בחודש שבו הכסף נגבה, לפי אחוזי הגבייה והחודשים שהגדרת לכל סוג תיק (החודש נספר מרגע קבלת הליד). נספרת רק גבייה מלקוחות שנחתמו, ובתיקים הפתוחים נספרת רק היתרה שעוד לא נגבתה.</li>
         <li>אחוזי ההמרה קבועים לאורך השנה, ובחודשי הקיץ יש פחות לידים. תרחיש &quot;חצי&quot; ו&quot;פי 1.5&quot; מכפילים את כל הפעילות.</li>
-        <li>ההוצאות כוללות הוצאות קבועות, צוות ומתפעלים שהגדרת, ופרסום ממומן. התשלום למתפעל נחשב ביום הגשת התיק.</li>
+        <li>ההוצאות כוללות הוצאות קבועות, צוות ומתפעלים שהגדרת, ופרסום ממומן. התשלום למתפעל נחשב ביום שהליד הופך ללקוח.</li>
       </ul>
     </div>
   );

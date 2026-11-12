@@ -33,8 +33,7 @@ export interface WeeklyTargets {
   /** Per week, for the current month of the plan. */
   leads: number;
   meetings: number;
-  /** Signed engagement agreements per week. */
-  agreements: number;
+  /** New clients (signed agreements) per week; the file goes to the bank right after. */
   cases: number;
   /** Content pieces (posts + videos) per week. */
   content: number;
@@ -65,7 +64,6 @@ export function weeklyTargets(S: PlanSettings, year: number, today: string): Wee
     monthIncome: P.tot.income[m],
     leads: wk(P.tot.leads),
     meetings: wk(P.tot.meet),
-    agreements: wk(P.tot.sub),
     cases: wk(P.tot.signed),
     content,
     partnerMeetings,
@@ -86,7 +84,6 @@ export function yearNeeds(S: PlanSettings, year: number) {
     to: end as number,
     target: S.target,
     cases: P.cases,
-    agreements: P.sub,
     avgFee: P.avgFee,
     leads: P.leads,
     meetings: P.meet,
@@ -106,10 +103,8 @@ export interface YearSummary {
   months: { plan: number; actual: number }[];
   leads: { plan: number; actual: number };
   meetings: { plan: number; actual: number };
-  /** Signed engagement agreements. */
+  /** New clients (signed agreements). */
   signed: { plan: number; actual: number };
-  /** Files submitted to banks. */
-  submitted: { plan: number; actual: number };
   costs: number;
   note?: string;
 }
@@ -118,21 +113,20 @@ export function summarizeYear(S: PlanSettings, year: number, days: Record<string
   const P = yearPlan(S, year);
   const from = yearSettings(S).start;
   const months = Array.from({ length: 12 }, (_, m) => ({ plan: Math.round(P.tot.income[m - from] ?? 0), actual: 0 }));
-  let leads = 0, meetings = 0, signed = 0, submitted = 0;
+  let leads = 0, meetings = 0, signed = 0;
   for (const d of Object.values(days)) {
     if (!d.date.startsWith(`${year}-`)) continue;
     months[Number(d.date.slice(5, 7)) - 1].actual += d.cash;
-    leads += d.leads; meetings += d.meetings; signed += d.signed; submitted += d.submissions;
+    leads += d.leads; meetings += d.meetings; signed += d.signed;
   }
   return {
     year,
     target: S.target,
     income: months.reduce((a, x) => a + x.actual, 0),
     months,
-    leads: { plan: Math.round(P.leads), actual: leads },
-    meetings: { plan: Math.round(P.meet), actual: meetings },
-    signed: { plan: Math.round(P.sub), actual: signed },
-    submitted: { plan: Math.round(P.cases), actual: submitted },
+    leads: { plan: Math.ceil(P.leads), actual: leads },
+    meetings: { plan: Math.ceil(P.meet), actual: meetings },
+    signed: { plan: Math.ceil(P.cases), actual: signed },
     costs: Math.round(expensesActual ?? P.costs),
   };
 }
@@ -151,7 +145,7 @@ export interface GoalRow { key: string; label: string; done: number; target: num
 
 /** This week's actuals against what the plan asks, as rows for the day and progress screens. */
 export function weekGoalRows(t: WeeklyTargets, w: { messages: number; meetings: number; content: number; leads: number }): GoalRow[] {
-  const want = (x: number) => (x > 0 ? Math.max(1, Math.round(x)) : 0);
+  const want = (x: number) => (x > 0 ? Math.max(1, Math.ceil(x - 1e-6)) : 0);
   const rows: GoalRow[] = [
     { key: "outreach", label: "פניות לשותפים", done: w.messages, target: want(t.outreach), href: "/admin/partners" },
     { key: "meetings", label: "פגישות עם שותפים", done: w.meetings, target: want(t.partnerMeetings), href: "/admin/partners" },
@@ -159,4 +153,55 @@ export function weekGoalRows(t: WeeklyTargets, w: { messages: number; meetings: 
     { key: "leads", label: "לידים חדשים", done: w.leads, target: want(t.leads), href: "/admin/leads" },
   ];
   return rows.filter((r) => r.target > 0);
+}
+
+/** One thing the plan asks for this week, turned into today's share of work. */
+export interface Quota {
+  key: string;
+  title: string;
+  sub: string;
+  href: string;
+  goal: "revenue" | "growth" | "exposure" | "admin";
+  est: number;
+  money: number;
+  urgent: boolean;
+}
+
+// Per unit: minutes it takes, how close it is to money, and the sentence that tells him what to do.
+const QUOTA_META: Record<string, { goal: Quota["goal"]; minutes: number; money: number; verb: (n: number) => string }> = {
+  outreach: { goal: "growth", minutes: 4, money: 45, verb: (n) => `לשלוח ${n} פניות לשותפים` },
+  meetings: { goal: "growth", minutes: 45, money: 60, verb: (n) => `לקיים ${n === 1 ? "פגישה" : `${n} פגישות`} עם שותפים` },
+  content: { goal: "exposure", minutes: 40, money: 20, verb: (n) => `לפרסם ${n === 1 ? "תוכן אחד" : `${n} תכנים`}` },
+  leads: { goal: "revenue", minutes: 30, money: 65, verb: (n) => n === 1 ? "לייצר ליד חדש אחד" : `לייצר ${n} לידים חדשים` },
+};
+
+/**
+ * Today's share of the weekly goals. The week's remaining work is spread over the working days that
+ * are left (Sunday to Thursday), so a goal of 14 messages asks for about 3 a day, a goal of one meeting
+ * shows up only when the week is half gone, and whatever is left on the last day becomes urgent.
+ */
+export function dailyQuotas(rows: GoalRow[], date: string): Quota[] {
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  if (weekday > 4) return [];
+  const daysLeft = 5 - weekday;
+  const out: Quota[] = [];
+  for (const r of rows) {
+    const meta = QUOTA_META[r.key];
+    const remaining = r.target - r.done;
+    if (!meta || remaining <= 0) continue;
+    const afterToday = (r.target * (daysLeft - 1)) / 5;
+    const n = Math.round(remaining - afterToday);
+    if (n <= 0) continue;
+    out.push({
+      key: r.key,
+      title: meta.verb(n),
+      sub: `יעד השבוע מהתוכנית: ${r.target} · נעשה עד עכשיו ${r.done}`,
+      href: r.href,
+      goal: meta.goal,
+      est: Math.min(Math.max(10, n * meta.minutes), 120),
+      money: meta.money,
+      urgent: daysLeft === 1,
+    });
+  }
+  return out;
 }

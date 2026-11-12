@@ -1,7 +1,7 @@
 "use client";
 
 import type { Params, Plan } from "@/lib/business-plan/model";
-import { MONTHS, dec, kfmt, money, nf } from "@/lib/business-plan/format";
+import { MONTHS, dec, kfmt, money, nf, cnt } from "@/lib/business-plan/format";
 import { atCum, buildForecast, buildVerdict, cumSigned, statusOf, watchRows, type Days, type Expenses, type Hor, type Win } from "@/lib/business-plan/forecast";
 import { BarChart, LineChart } from "./charts";
 import { Btn, Card, Legend, Num, Pill, Seg } from "./ui";
@@ -11,7 +11,7 @@ function Status({ r }: { r: number }) {
   return s === "good" ? <Pill tone="good">✓ בקצב</Pill> : s === "warn" ? <Pill tone="warn">▲ מתחת</Pill> : <Pill tone="bad">✕ רחוק</Pill>;
 }
 
-const fmtMetric = (key: string, v: number) => (key === "income" ? money(v) : dec(v));
+const fmtMetric = (key: string, v: number) => (key === "income" ? money(v) : cnt(v));
 const hd = (d: Date) => d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "numeric" });
 
 export default function TabWatch({
@@ -82,7 +82,7 @@ export default function TabWatch({
             </div>
             <Card>
               <p className="text-base leading-relaxed">
-                עד <b>{hd(fc.hE)}</b>, אם תמשיך בקצב שדיווחת, תסגור בערך <b><Num>{dec(fc.rows[3].cur)}</Num> תיקים</b> ויכנסו לך <b><Num>{money(fc.rows[4].cur)}</Num></b>.
+                עד <b>{hd(fc.hE)}</b>, אם תמשיך בקצב שדיווחת, תסגור בערך <b><Num>{cnt(fc.rows[3].cur)}</Num> תיקים</b> ויכנסו לך <b><Num>{money(fc.rows[4].cur)}</Num></b>.
                 אחרי הוצאות: {fc.net.cur >= 0 ? "נשאר בכיס" : "חסרים"} <b><Num>{money(Math.abs(fc.net.cur))}</Num></b> {fc.net.cur >= 0 ? <Pill tone="good">✓ רווח</Pill> : <Pill tone="bad">✕ גירעון</Pill>}.
               </p>
               {fc.young && <p className="mt-1.5 text-sm text-foreground/55">עדיין מעט נתונים בתוכנית עד היום, ולכן ההערכה גסה ותתייצב ככל שיעברו עוד שבועות ותדווח עוד ימים.</p>}
@@ -123,16 +123,16 @@ export default function TabWatch({
           <section className="flex flex-col gap-3">
             <h2 className="text-xl font-extrabold text-primary">לאן זה מוביל, בתיקים</h2>
             <Card className="flex flex-col gap-1.5 border-s-4" >
-              <p className="text-xs text-foreground/55">בקצב הנוכחי (<Num>{Math.round(vd.pace * 100)}%</Num> מהתכנון, לפי {vd.basis === "signed" ? "תיקים שהוגשו" : "לידים"})</p>
-              <p className="text-2xl font-extrabold"><Num>{dec(vd.final)} תיקים</Num> <span className="text-base font-semibold text-foreground/70">בסוף השנה</span></p>
+              <p className="text-xs text-foreground/55">בקצב הנוכחי (<Num>{Math.round(vd.pace * 100)}%</Num> מהתכנון, לפי {vd.basis === "signed" ? "לקוחות חדשים" : "לידים"})</p>
+              <p className="text-2xl font-extrabold"><Num>{cnt(vd.final)} תיקים</Num> <span className="text-base font-semibold text-foreground/70">בסוף השנה</span></p>
               <p>
                 זה <Num>{Math.round(vd.ratio * 100)}%</Num> מהיעד, {vd.near}.{" "}
-                {vd.ratio < 1 ? <>כדי לחזור ליעד צריך לסגור בערך <b><Num>{dec(vd.needPerMonth)}</Num></b> תיקים בחודש בשאר השנה.</> : "אפשר להמשיך בקצב הזה."}
+                {vd.ratio < 1 ? <>כדי לחזור ליעד צריך לסגור בערך <b><Num>{cnt(vd.needPerMonth)}</Num></b> תיקים בחודש בשאר השנה.</> : "אפשר להמשיך בקצב הזה."}
               </p>
             </Card>
             <Card>
               <Legend items={[{ t: "בפועל", color: "currentColor", kind: "line" }, { t: "המשך בקצב הנוכחי", color: "currentColor", kind: "dash" }, { t: "היעד", color: "var(--pl-s100)", kind: "line" }, { t: "חצי ופי 1.5", color: "var(--pl-s50)", kind: "dash" }]} />
-              <LineChart aria="תיקים מצטברים: תכנון מול בפועל" count={53} yFmt={(v) => dec(v)} tipFmt={(v) => dec(v) + " תיקים"} cur={vd.weekNow}
+              <LineChart aria="תיקים מצטברים: תכנון מול בפועל" count={53} yFmt={(v) => cnt(v)} tipFmt={(v) => cnt(v) + " תיקים"} cur={vd.weekNow}
                 ticks={Array.from({ length: 12 }, (_, m) => ({ i: Math.round((m * 52) / 12), label: MONTHS[(p.start + m) % 12] }))} tipTitle={(i) => `שבוע ${i}`}
                 series={[
                   { name: "פי 1.5", color: "var(--pl-s150)", v: xs.map((i) => atCum(c150, i)), w: 1.5, label: "פי 1.5" },

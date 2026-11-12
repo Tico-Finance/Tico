@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Plan } from "@/lib/business-plan/model";
 import type { DayEntry } from "@/lib/business-plan/types";
-import { dec, money } from "@/lib/business-plan/format";
+import { dec, money, cnt } from "@/lib/business-plan/format";
 import { actSum, METRICS, planSum, type Days } from "@/lib/business-plan/forecast";
 import { addD, dk, pdt } from "@/lib/business-plan/dates";
 import { Btn, Card, Num, NumInput } from "./ui";
@@ -15,8 +15,7 @@ const EMPTY: Fields = { leads: 0, meetings: 0, submissions: 0, signed: 0, cash: 
 const COUNTERS: { f: keyof Fields; label: string }[] = [
   { f: "leads", label: "לידים חדשים" },
   { f: "meetings", label: "פגישות שקיימתי" },
-  { f: "signed", label: "הסכמי התקשרות שנחתמו" },
-  { f: "submissions", label: "תיקים שהוגשו לבנקים" },
+  { f: "signed", label: "לקוחות חדשים (הסכם חתום)" },
 ];
 
 export default function TabReport({
@@ -44,7 +43,7 @@ export default function TabReport({
           <div className="flex flex-col gap-1.5">
             {METRICS.map((m) => {
               const pl = planSum(plan1, m.key, wa, today, ps), ac = actSum(days, m.field, wa, today), r = pl > 0 ? ac / pl : 0;
-              const f = (v: number) => (m.key === "income" ? money(v) : dec(v));
+              const f = (v: number) => (m.key === "income" ? money(v) : cnt(v));
               return (
                 <div key={m.key} className="grid grid-cols-[minmax(110px,150px)_1fr_auto] items-center gap-3 py-1 max-sm:grid-cols-[1fr_auto]">
                   <span>{m.label}</span>
@@ -65,14 +64,14 @@ export default function TabReport({
           {keys.length === 0 ? <p className="text-sm text-foreground/50">עוד אין דיווחים.</p> : (
             <div className="overflow-x-auto">
               <table className="pl-table">
-                <thead><tr><th>יום</th><th>לידים</th><th>פגישות</th><th>חתימות על הסכם</th><th>הגשות</th><th>כסף</th><th /></tr></thead>
+                <thead><tr><th>יום</th><th>לידים</th><th>פגישות</th><th>לקוחות חדשים</th><th>כסף</th><th /></tr></thead>
                 <tbody>
                   {keys.map((k) => {
                     const d = days[k];
                     return (
                       <tr key={k}>
                         <th scope="row">{hdate(k)}{d.demo && <> <span className="text-xs font-normal text-foreground/50">(דוגמה)</span></>}</th>
-                        <td className="v">{d.leads}</td><td className="v">{d.meetings}</td><td className="v">{d.signed}</td><td className="v">{d.submissions}</td>
+                        <td className="v">{d.leads}</td><td className="v">{d.meetings}</td><td className="v">{d.signed}</td>
                         <td className="v"><Num>{money(d.cash)}</Num></td>
                         <td className="whitespace-nowrap">
                           <button type="button" className="pl-link" onClick={() => { setDate(k); window.scrollTo({ top: 0, behavior: "smooth" }); }}>ערוך</button>

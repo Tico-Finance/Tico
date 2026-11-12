@@ -332,7 +332,7 @@ function StepPay({ S, upd }: { S: PlanSettings; upd: Upd }) {
     <>
       <h2 className="text-2xl font-extrabold text-primary">כמה זמן לוקח וכמה אתה גובה?</h2>
       <p className="text-sm text-foreground/60">
-        לכל סוג תיק: כמה חודשים עוברים מרגע שהליד מגיע ועד הגשת התיק, ואיך אתה גובה את העמלה. הציר מראה מתי נכנס הכסף.
+        לכל סוג תיק: כמה חודשים עוברים מרגע שהליד מגיע ועד שהוא לקוח, ואיך אתה גובה את העמלה. הציר מראה מתי נכנס הכסף.
       </p>
       <div className="flex flex-col gap-3">
         {S.types.map((t, i) => (t.on ? <PayCard key={t.id} t={t} i={i} upd={upd} /> : null))}
@@ -351,8 +351,8 @@ function PayCard({ t, i, upd }: { t: CaseType; i: number; upd: Upd }) {
         <span className="h-3 w-3 rounded-sm" style={{ background: `var(--pl-t${(i % 10) + 1})` }} />{t.n}
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="font-bold">מליד עד הגשה</span>
-        <Select value={t.lag} options={lagOpts} label="חודשים עד הגשה"
+        <span className="font-bold">מליד עד לקוח</span>
+        <Select value={t.lag} options={lagOpts} label="חודשים עד לקוח"
           onChange={(v) => set((x) => { x.lag = v; if (x.pay !== "custom") applyPay(x); })} />
       </div>
       <div className="font-bold">איך אתה גובה?</div>
@@ -380,11 +380,10 @@ function PayCard({ t, i, upd }: { t: CaseType; i: number; upd: Upd }) {
 
 function StepConv({ S, upd }: { S: PlanSettings; upd: Upd }) {
   const g = S.g;
-  const a = g.c1, b = (a * g.c2) / 100, c = (b * g.c3) / 100;
+  const a = g.c1, b = (a * g.c2) / 100;
   const rows = [
     ["c1", "ליד שהופך לפגישה"],
-    ["c2", "פגישה שהופכת להסכם התקשרות חתום"],
-    ["c3", "הסכם חתום שהופך לתיק שמוגש לבנקים"],
+    ["c2", "פגישה שהופכת ללקוח (הסכם התקשרות חתום)"],
   ] as const;
   return (
     <>
@@ -401,20 +400,19 @@ function StepConv({ S, upd }: { S: PlanSettings; upd: Upd }) {
       ))}
       <div className="rounded-xl bg-black/[.04] p-4 text-base">
         מתוך 100 לידים: <b><span className="num">{Math.round(a * 10) / 10}</span></b> פגישות,{" "}
-        <b><span className="num">{Math.round(b * 10) / 10}</span></b> הסכמי התקשרות,{" "}
-        <b><span className="num">{Math.round(c * 10) / 10}</span></b> הגשות לבנקים
+        <b><span className="num">{Math.round(b * 10) / 10}</span></b> לקוחות
       </div>
       <details>
         <summary className="cursor-pointer font-semibold text-primary">לדייק לכל סוג תיק בנפרד</summary>
         <div className="mt-3 overflow-x-auto">
           <table className="pl-table">
-            <thead><tr><th>סוג</th><th>ליד←פגישה</th><th>פגישה←הסכם</th><th>הסכם←הגשה</th></tr></thead>
+            <thead><tr><th>סוג</th><th>ליד←פגישה</th><th>פגישה←לקוח</th></tr></thead>
             <tbody>
               {S.types.map((t, i) =>
                 t.on ? (
                   <tr key={t.id}>
                     <th scope="row">{t.n}</th>
-                    {(["c1", "c2", "c3"] as const).map((k) => (
+                    {(["c1", "c2"] as const).map((k) => (
                       <td key={k}><NumInput value={t[k]} unit="%" min={1} max={100} width={96} onChange={(n) => upd((d) => { d.types[i][k] = n; })} /></td>
                     ))}
                   </tr>

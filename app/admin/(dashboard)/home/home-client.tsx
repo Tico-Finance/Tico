@@ -11,7 +11,7 @@ import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast"
 import { dk, pdt } from "@/lib/business-plan/dates";
 import { planStartOf, yearSettings } from "@/lib/business-plan/targets";
 import WeekGoals from "../week-goals";
-import { dec, money, nf } from "@/lib/business-plan/format";
+import { dec, money, nf, cnt } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
 import DayMatrix, { type MatrixProps } from "./day-matrix";
 import PushPrompt from "./push-prompt";
@@ -209,7 +209,7 @@ function Target({ settings, days, today, year }: { settings: PlanSettings | null
                 <div className="mb-1 flex justify-between text-sm">
                   <span>{r.label}</span>
                   <span className="text-foreground/70">
-                    {r.key === "income" ? `${money(r.act)} מתוך ${money(r.plan)}` : `${dec(r.act)} מתוך ${dec(r.plan)}`}
+                    {r.key === "income" ? `${money(r.act)} מתוך ${money(r.plan)}` : `${cnt(r.act)} מתוך ${cnt(r.plan)}`}
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-black/10">
@@ -220,8 +220,8 @@ function Target({ settings, days, today, year }: { settings: PlanSettings | null
           </ul>
           {vd && (
             <p className="mt-4 rounded-xl bg-primary/5 p-3 text-sm">
-              בקצב הנוכחי תסיים את השנה עם כ-{nf(vd.final)} תיקים, {nf(vd.ratio * 100)}% מהיעד ({vd.near}).
-              {vd.needPerMonth > 0 && <> כדי להגיע ליעד נדרשים כ-{dec(vd.needPerMonth)} תיקים בחודש.</>}
+              בקצב הנוכחי תסיים את השנה עם כ-{cnt(vd.final)} תיקים, {nf(vd.ratio * 100)}% מהיעד ({vd.near}).
+              {vd.needPerMonth > 0 && <> כדי להגיע ליעד נדרשים כ-{cnt(vd.needPerMonth)} תיקים בחודש.</>}
             </p>
           )}
         </>

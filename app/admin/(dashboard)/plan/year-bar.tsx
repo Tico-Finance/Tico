@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanSettings } from "@/lib/business-plan/types";
 import { yearNeeds, type YearSummary } from "@/lib/business-plan/targets";
-import { MONTHS, money, nf } from "@/lib/business-plan/format";
+import { MONTHS, cnt, money, nf } from "@/lib/business-plan/format";
 import { closePlanYearAction, createPlanYearAction, reopenPlanYearAction } from "./actions";
 import { cx } from "./ui";
 
@@ -63,16 +63,16 @@ export function YearBar({ year, closed, summary, years, canOpen }: Props) {
 
 function ClosedSummary({ s }: { s: YearSummary }) {
   const pct = s.target > 0 ? Math.round((s.income / s.target) * 100) : 0;
-  const rows: [string, { plan: number; actual: number }][] = [["לידים", s.leads], ["פגישות", s.meetings], ["הסכמים חתומים", s.signed], ["הגשות לבנקים", s.submitted ?? { plan: 0, actual: 0 }]];
+  const rows: [string, { plan: number; actual: number }][] = [["לידים", s.leads], ["פגישות", s.meetings], ["לקוחות חדשים", s.signed]];
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-black/5">
       <h2 className="font-semibold text-primary">סיכום {s.year} · נשמר ולא ישתנה</h2>
       <p className="mt-1 text-sm">הכנסה בפועל {money(s.income)} מתוך יעד {money(s.target)} ({pct}%).</p>
-      <ul className="mt-2 grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
+      <ul className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
         {rows.map(([l, v]) => (
           <li key={l} className="rounded-xl bg-primary/5 p-2">
-            <div className="text-lg font-bold text-primary">{nf(v.actual)}</div>
-            <div className="text-xs text-foreground/60">{l} · תוכנית {nf(v.plan)}</div>
+            <div className="text-lg font-bold text-primary">{cnt(v.actual)}</div>
+            <div className="text-xs text-foreground/60">{l} · תוכנית {cnt(v.plan)}</div>
           </li>
         ))}
       </ul>
@@ -84,12 +84,11 @@ function ClosedSummary({ s }: { s: YearSummary }) {
 export function NeedsCard({ S, year }: { S: PlanSettings; year: number }) {
   const n = yearNeeds(S, year);
   const items: [string, string][] = [
-    ["הסכמי התקשרות", nf(n.agreements)],
-    ["הגשות לבנקים", nf(n.cases)],
-    ["פגישות לקוחות", nf(n.meetings)],
-    ["לידים", nf(n.leads)],
-    ["תכנים שמתפרסמים", `${nf(n.content / n.weeks)} בשבוע`],
-    ["פניות לשותפים", `${nf(n.outreach / n.weeks)} בשבוע`],
+    ["לקוחות חדשים", cnt(n.cases)],
+    ["פגישות לקוחות", cnt(n.meetings)],
+    ["לידים", cnt(n.leads)],
+    ["תכנים שמתפרסמים", `${cnt(n.content / n.weeks)} בשבוע`],
+    ["פניות לשותפים", `${cnt(n.outreach / n.weeks)} בשבוע`],
     ["שעות עבודה", `${nf(n.hoursPerWeek)} בשבוע`],
   ];
   return (
