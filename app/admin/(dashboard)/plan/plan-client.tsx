@@ -5,8 +5,10 @@ import type { ActionEntry, DayEntry, ExpenseEntry, PlanData, PlanSettings } from
 import { defaultSettings } from "@/lib/business-plan/defaults";
 import { buildParams, buildPlan } from "@/lib/business-plan/model";
 import { buildDemo, type Hor, type Win } from "@/lib/business-plan/forecast";
-import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
+import { dk, pdt } from "@/lib/business-plan/dates";
 import { deletePlanEntriesAction, savePlanEntriesAction, savePlanSettingsAction } from "./actions";
+import { planStartOfYear, yearSettings, type YearSummary } from "@/lib/business-plan/targets";
+import { NeedsCard, YearBar } from "./year-bar";
 import { cx } from "./ui";
 import Wizard from "./wizard";
 import TabPlan from "./tab-plan";
@@ -29,16 +31,24 @@ const noopSubscribe = () => () => {};
 const SETTINGS_DEBOUNCE = 700;
 const ENTRY_DEBOUNCE = 500;
 
-export default function PlanClient({ initial }: { initial: PlanData }) {
+export interface YearProps {
+  year: number;
+  closed: boolean;
+  summary: YearSummary | null;
+  years: { year: number; closed: boolean }[];
+  canOpen: number[];
+}
+
+export default function PlanClient({ initial, ...year }: { initial: PlanData } & YearProps) {
   // "Today" only exists on the client (the server may be in another timezone), so render nothing until it is known.
   const todayKey = useSyncExternalStore(noopSubscribe, () => dk(new Date()), () => null);
   if (todayKey === null) return <div className="plan mx-auto max-w-4xl py-10 text-center text-foreground/50">טוען…</div>;
-  return <PlanApp initial={initial} today={pdt(todayKey)} />;
+  return <PlanApp initial={initial} today={pdt(todayKey)} {...year} />;
 }
 
-function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
+function PlanApp({ initial, today, year, closed, summary, years, canOpen }: { initial: PlanData; today: Date } & YearProps) {
   const [saved, setSaved] = useState<PlanSettings | null>(initial.settings);
-  const base = useMemo(() => saved ?? defaultSettings(today), [saved, today]);
+  const base = useMemo(() => yearSettings(saved ?? defaultSettings(planStartOfYear(year))), [saved, year]);
   const S = base;
 
   const [view, setView] = useState<"wizard" | "dash">(initial.settings?.done ? "dash" : "wizard");
@@ -67,9 +77,9 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
     const s = settingsLatest.current;
     settingsLatest.current = null;
     if (!s) return;
-    const r = await savePlanSettingsAction(s);
+    const r = await savePlanSettingsAction(year, s);
     if (!r.ok) say("שמירת ההגדרות נכשלה: " + r.error);
-  }, [say]);
+  }, [say, year]);
 
   const sendEntry = useCallback(async (id: string) => {
     const p = entryPending.current.get(id);
@@ -104,10 +114,11 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
   }, [sendSettings]);
 
   const upd = useCallback((fn: (d: PlanSettings) => void) => {
+    if (closed) { say("השנה סגורה. כדי לערוך, פתח אותה מחדש."); return; }
     const d = structuredClone(base);
     fn(d);
     commitSettings(d);
-  }, [base, commitSettings]);
+  }, [base, commitSettings, closed, say]);
 
   const persist = useCallback((kind: Kind, key: string, data: unknown) => {
     const id = `${kind}:${key}`;
@@ -143,7 +154,7 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
   const removeExpense = (k: string) => { setExpenses((m) => { const n = { ...m }; delete n[k]; return n; }); void unpersist("expense", [k]); };
 
   /* ---------- derived plan ---------- */
-  const ps = useMemo(() => planStartFor(S.start, today), [S.start, today]);
+  const ps = useMemo(() => planStartOfYear(year), [year]);
   const p = useMemo(() => buildParams(S, ps), [S, ps]);
   const plans = useMemo(() => [0.5, 1, 1.5].map((k) => buildPlan(p, k)), [p]);
 
@@ -172,7 +183,7 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
   const openStep = (n: number) => { setStep(n); setView("wizard"); window.scrollTo(0, 0); };
   const reset = () => {
     if (!window.confirm("לאפס את ההגדרות לדוגמה? הדיווחים וההוצאות שהזנת לא יימחקו.")) return;
-    commitSettings(defaultSettings(today));
+    commitSettings(defaultSettings(planStartOfYear(year)));
     openStep(0);
   };
 
@@ -183,7 +194,8 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
       ) : (
         <>
           <header className="flex flex-col gap-3">
-            <h1 className="text-2xl font-extrabold text-primary">תוכנית עסקית</h1>
+            <h1 className="text-2xl font-extrabold text-primary">תוכנית עסקית {year}</h1>
+            <YearBar year={year} closed={closed} summary={summary} years={years} canOpen={canOpen} />
             <nav className="flex gap-1.5 overflow-x-auto border-b-2" style={{ borderColor: "var(--pl-line)" }} role="tablist" aria-label="אזורים">
               {TABS.map((t) => (
                 <button key={t.v} type="button" role="tab" aria-selected={tab === t.v} onClick={() => setTab(t.v)}
@@ -197,8 +209,9 @@ function PlanApp({ initial, today }: { initial: PlanData; today: Date }) {
 
           {tab === "plan" && (
             <>
+              <NeedsCard S={S} year={year} />
               <TabPlan S={S} p={p} plans={plans} K={K} setK={setK} setTarget={(n) => upd((d) => { d.target = n; })} openStep={openStep} />
-              <p><button type="button" className="pl-link text-sm" onClick={reset}>איפוס לדוגמה והתחלה מחדש</button></p>
+              {!closed && <p><button type="button" className="pl-link text-sm" onClick={reset}>איפוס לדוגמה והתחלה מחדש</button></p>}
             </>
           )}
           {tab === "watch" && (

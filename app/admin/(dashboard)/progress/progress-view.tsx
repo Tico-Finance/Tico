@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { deltaPct, type WeekStats } from "@/lib/progress";
+import type { GoalRow } from "@/lib/business-plan/targets";
+import WeekGoals from "../week-goals";
 
 // Weekly progress: stacked bars of points by how close they are to money, the share of
 // money-focused work per week, and this week against the previous one.
@@ -22,7 +24,7 @@ const METRICS: { key: keyof WeekStats; label: string }[] = [
   { key: "tasksDone", label: "משימות שבוצעו" },
 ];
 
-export default function ProgressView({ weeks }: { weeks: WeekStats[] }) {
+export default function ProgressView({ weeks, goals, planYear }: { weeks: WeekStats[]; goals: GoalRow[]; planYear: number | null }) {
   const cur = weeks[weeks.length - 1];
   const prev = weeks[weeks.length - 2];
   const delta = prev ? deltaPct(cur.total, prev.total) : null;
@@ -62,6 +64,8 @@ export default function ProgressView({ weeks }: { weeks: WeekStats[] }) {
         </div>
         <Link href="/admin/home" className="text-sm text-secondary">חזרה ליום</Link>
       </div>
+
+      {planYear !== null && <WeekGoals rows={goals} year={planYear} />}
 
       <section className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex flex-wrap items-end gap-6">

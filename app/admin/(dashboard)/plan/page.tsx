@@ -1,48 +1,38 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { planEntries, planSettings } from "@/drizzle/schema";
 import { currentUserId } from "@/lib/auth";
-import { planSettingsSchema } from "@/lib/business-plan/schemas";
-import type {
-  ActionEntry,
-  DayEntry,
-  ExpenseEntry,
-  PlanData,
-} from "@/lib/business-plan/types";
+import { todayIL } from "@/lib/partners";
+import type { ActionEntry, PlanData } from "@/lib/business-plan/types";
+import { activePlan, listPlanYears, loadYearEntries } from "@/lib/plan-db";
 import PlanClient from "./plan-client";
 import "./plan.css";
 
 export const metadata = { title: "תוכנית עסקית | Tico" };
 
-export default async function PlanPage() {
+export default async function PlanPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
   const userId = await currentUserId();
   if (!userId) redirect("/admin/login");
 
-  const [settingsRow] = await db
-    .select()
-    .from(planSettings)
-    .where(eq(planSettings.userId, userId))
-    .limit(1);
-  const entries = await db
-    .select()
-    .from(planEntries)
-    .where(eq(planEntries.userId, userId));
+  const thisYear = Number(todayIL().slice(0, 4));
+  const rows = await listPlanYears(userId);
+  const asked = Number((await searchParams).year);
+  const year = Number.isInteger(asked) && asked >= 2024 && asked <= 2100 ? asked : activePlan(rows, thisYear)?.year ?? thisYear;
+  const row = rows.find((r) => r.year === year) ?? null;
 
-  // Stored settings are re-validated; anything that no longer fits falls back to the defaults.
-  const parsed = settingsRow ? planSettingsSchema.safeParse(settingsRow.data) : null;
+  const { days, expenses, all } = await loadYearEntries(userId, year);
+  const actions: Record<string, ActionEntry> = {};
+  for (const e of all) if (e.kind === "action" && e.key && (e.data as { date?: string }).date?.startsWith(`${year}-`)) actions[e.key] = e.data as unknown as ActionEntry;
 
-  const initial: PlanData = {
-    settings: parsed?.success ? parsed.data : null,
-    days: {},
-    actions: {},
-    expenses: {},
-  };
-  for (const e of entries) {
-    if (e.kind === "day") initial.days[e.key] = e.data as unknown as DayEntry;
-    else if (e.kind === "action") initial.actions[e.key] = e.data as unknown as ActionEntry;
-    else initial.expenses[e.key] = e.data as unknown as ExpenseEntry;
-  }
-
-  return <PlanClient initial={initial} />;
+  const initial: PlanData = { settings: row?.settings ?? null, days, actions, expenses };
+  const known = new Set(rows.map((r) => r.year));
+  return (
+    <PlanClient
+      key={year}
+      initial={initial}
+      year={year}
+      closed={!!row?.closedAt}
+      summary={row?.summary ?? null}
+      years={rows.map((r) => ({ year: r.year, closed: !!r.closedAt })).reverse()}
+      canOpen={[thisYear, thisYear + 1].filter((y) => !known.has(y) && y !== year)}
+    />
+  );
 }

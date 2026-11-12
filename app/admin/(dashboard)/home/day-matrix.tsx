@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { GoalRow } from "@/lib/business-plan/targets";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
@@ -34,6 +35,8 @@ export interface MatrixProps {
   goals: Record<Goal, number>;
   done: DoneToday;
   weekly: WeekStats[];
+  weekGoals: GoalRow[];
+  planYear: number | null;
   moneyToday: number;
   nowMinutes: number;
 }

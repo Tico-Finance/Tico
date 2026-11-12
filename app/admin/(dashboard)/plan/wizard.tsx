@@ -154,10 +154,6 @@ function StepGoal({ S, upd, planYear }: { S: PlanSettings; upd: Upd; planYear: n
         </div>
       </div>
 
-      <Q label="מאיזה חודש מתחילים לספור?" hint="התחזית תרוץ 12 חודשים מכאן">
-        <Select value={S.start} label="חודש התחלה" className="self-start" options={MONTHS.map((m, v) => ({ v, label: m }))}
-          onChange={(v) => upd((d) => { d.start = v; })} />
-      </Q>
       <Q label="כמה תיקים כבר פתוחים אצלך עכשיו?" hint="תיקים שעוד לא נחתמו">
         <NumInput value={S.open} unit="תיקים" label="תיקים פתוחים" className="self-start" onChange={(n) => upd((d) => { d.open = n; })} />
       </Q>

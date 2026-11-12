@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   unique,
+  primaryKey,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -448,15 +449,23 @@ export const planEntryKindEnum = pgEnum("plan_entry_kind", [
   "expense",
 ]);
 
-export const planSettings = pgTable("plan_settings", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  data: jsonb("data").$type<Record<string, unknown>>().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+// One plan per calendar year. A closed year keeps its settings plus a frozen summary of plan vs actual.
+export const planSettings = pgTable(
+  "plan_settings",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    year: integer("year").notNull().default(2026),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull(),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    summary: jsonb("summary").$type<Record<string, unknown>>(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.year] })]
+);
 
 export const planEntries = pgTable(
   "plan_entries",

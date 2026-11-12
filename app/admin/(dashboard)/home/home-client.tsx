@@ -8,7 +8,9 @@ import type { DayEntry, PlanSettings } from "@/lib/business-plan/types";
 import { defaultSettings } from "@/lib/business-plan/defaults";
 import { buildParams, buildPlan } from "@/lib/business-plan/model";
 import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast";
-import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
+import { dk, pdt } from "@/lib/business-plan/dates";
+import { planStartOfYear, yearSettings } from "@/lib/business-plan/targets";
+import WeekGoals from "../week-goals";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
 import DayMatrix, { type MatrixProps } from "./day-matrix";
@@ -91,7 +93,9 @@ function Home({ leads, settings, days, calendar, matrix, today }: {
       <PushPrompt />
       <DayMatrix {...matrix} />
 
-      <Target settings={settings} days={days} today={today} />
+      {matrix.planYear !== null && <WeekGoals rows={matrix.weekGoals} year={matrix.planYear} />}
+
+      <Target settings={settings} days={days} today={today} year={matrix.planYear ?? today.getFullYear()} />
     </div>
   );
 }
@@ -162,13 +166,13 @@ function LeadItem({ l, showTime, overdue }: { l: LeadRow; showTime?: boolean; ov
   );
 }
 
-function Target({ settings, days, today }: { settings: PlanSettings | null; days: Record<string, DayEntry>; today: Date }) {
+function Target({ settings, days, today, year }: { settings: PlanSettings | null; days: Record<string, DayEntry>; today: Date; year: number }) {
   const model = useMemo(() => {
-    const S = settings ?? defaultSettings(today);
-    const ps = planStartFor(S.start, today);
+    const S = yearSettings(settings ?? defaultSettings(planStartOfYear(year)));
+    const ps = planStartOfYear(year);
     const plans = [0.5, 1, 1.5].map((k) => buildPlan(buildParams(S, ps), k));
     return { ps, plans };
-  }, [settings, today]);
+  }, [settings, year]);
 
   if (!settings?.done) {
     return (
