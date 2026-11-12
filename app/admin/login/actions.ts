@@ -13,7 +13,7 @@ export async function loginAction(
   // (e.g. a stale /admin/drafts link to the unprovisioned marketing pages)
   // falls back to the home screen so login never lands on a broken page.
   const requested = String(formData.get("callbackUrl") ?? "");
-  const callbackUrl = ["/admin/rtm", "/admin/home", "/admin/leads", "/admin/plan"].some((p) =>
+  const callbackUrl = ["/admin/home", "/admin/leads", "/admin/plan"].some((p) =>
     requested.startsWith(p),
   )
     ? requested

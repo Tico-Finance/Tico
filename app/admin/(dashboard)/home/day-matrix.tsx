@@ -15,7 +15,7 @@ import {
   type Quadrant,
 } from "@/lib/priorities";
 import { deltaPct, type WeekStats } from "@/lib/progress";
-import { createTaskAction, deleteTaskAction, postponeTaskAction, updateTaskAction } from "./actions";
+import { createTaskAction, deleteTaskAction, logRoutineAction, postponeTaskAction, updateTaskAction } from "./actions";
 
 export interface DoneToday {
   messages: number;
@@ -106,7 +106,9 @@ export default function DayMatrix({
   const doneAction = (t: PriorityTask) =>
     t.source === "manual"
       ? <button disabled={pending} onClick={() => run(() => updateTaskAction(t.id, { status: "done" }), "כל הכבוד. סומן כבוצע")} className="rounded-xl bg-button px-4 py-2 text-sm font-medium text-white">עשיתי</button>
-      : null;
+      : t.source === "routine" && t.due
+        ? <button disabled={pending} onClick={() => run(() => logRoutineAction(t.id, t.due as string, "done"), "כל הכבוד. סומן כבוצע")} className="rounded-xl bg-button px-4 py-2 text-sm font-medium text-white">עשיתי</button>
+        : null;
 
   const focusCard = focus && (
     <section className="rounded-2xl bg-primary p-4 text-white shadow-md">
@@ -181,6 +183,11 @@ export default function DayMatrix({
               {([1, 2, 3, 4] as Quadrant[]).map((q) => <option key={q} value={q}>{`פינה ${q}: ${QUADRANTS[q].title}`}</option>)}
               <option value="drop">מחק</option>
             </select>
+          </div>
+        ) : t.source === "routine" && t.due ? (
+          <div className="flex shrink-0 items-center gap-1">
+            <button disabled={pending} onClick={() => run(() => logRoutineAction(t.id, t.due as string, "done"), "סומן כבוצע")} className="rounded-lg bg-button px-2 py-1 text-xs font-medium text-white">בוצע</button>
+            <button disabled={pending} onClick={() => run(() => logRoutineAction(t.id, t.due as string, "skipped"), "דולג")} className="rounded-lg border border-black/10 px-2 py-1 text-xs text-primary">דלג</button>
           </div>
         ) : (
           <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-xs text-foreground/70">{GOAL_LABELS[t.goal]}</span>

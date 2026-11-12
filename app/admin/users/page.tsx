@@ -21,7 +21,7 @@ export default async function UsersPage() {
 
   // Only the owner may see the control panel; everyone else goes to their board.
   if (!email) redirect("/admin/login");
-  if (email !== ownerEmail()) redirect("/admin/rtm");
+  if (email !== ownerEmail()) redirect("/admin/home");
 
   const rows = await db
     .select()
@@ -64,7 +64,7 @@ export default async function UsersPage() {
           <p className="text-xs text-white/85">מי נרשם, מפתחות Gemini וניהול סיסמאות</p>
         </div>
         <Link
-          href="/admin/rtm"
+          href="/admin/home"
           className="text-xs font-medium text-white underline-offset-2 hover:underline"
         >
           חזרה לחדשות ←

@@ -1,14 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/generate-content",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/rtm-briefs",
-      "schedule": "0 5 * * *"
-    },
-    {
       "path": "/api/cron/tikia-scan",
       "schedule": "0 7 * * *"
     },

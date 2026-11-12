@@ -769,3 +769,43 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
     .notNull()
     .defaultNow(),
 });
+
+// ── Weekly routines: things that must happen on set weekdays (record the podcast, edit, publish) ──
+
+export const routines = pgTable("routines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  // 0 = Sunday .. 6 = Saturday
+  weekdays: integer("weekdays").array().notNull(),
+  // Minutes from midnight when it has a fixed time, otherwise the planner finds a slot.
+  startMin: integer("start_min"),
+  estMinutes: integer("est_minutes").notNull().default(30),
+  // revenue | growth | exposure | admin
+  goal: text("goal").notNull().default("exposure"),
+  // Flexible routines are important but not urgent on their day (quadrant 2); the rest are quadrant 1.
+  flexible: boolean("flexible").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const routineLogs = pgTable(
+  "routine_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    routineId: uuid("routine_id")
+      .notNull()
+      .references(() => routines.id, { onDelete: "cascade" }),
+    // The day the routine was due (YYYY-MM-DD, Israel).
+    date: date("date", { mode: "string" }).notNull(),
+    // done | skipped
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("routine_logs_routine_date_unique").on(t.routineId, t.date)]
+);

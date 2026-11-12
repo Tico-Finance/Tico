@@ -2,8 +2,11 @@ import { and, eq, gte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clientEvents, clients, contentItems, leads, partnerEvents, partners, tasks } from "@/drizzle/schema";
 import { SENT_EVENT_KINDS, addDays, hoursAgo, todayIL } from "@/lib/partners";
+import { getCalendarEvents } from "@/lib/calendar";
 import { buildPriorityTasks, dayToPlan, nextWorkday, nowIL, planDay, rankForFocus, summarizeGoals } from "@/lib/priorities";
 import { loadProgress } from "@/lib/progress-db";
+import { dueOccurrences, LOOKBACK_DAYS } from "@/lib/routines";
+import { listRoutines, loadRoutineLogs } from "@/lib/routines-db";
 import { activePlan, listPlanYears } from "@/lib/plan-db";
 import { weekGoalRows, weeklyTargets } from "@/lib/business-plan/targets";
 
@@ -28,7 +31,17 @@ export async function buildDay(userId: string, at: Date = new Date()) {
     db.select({ kind: clientEvents.kind, at: clientEvents.at })
       .from(clientEvents).where(and(eq(clientEvents.userId, userId), gte(clientEvents.at, hoursAgo(36)))),
   ]);
-  const [weekly, planRows] = await Promise.all([loadProgress(userId, now.date, 6), listPlanYears(userId)]);
+  const [weekly, planRows, routineRows, routineLogs, calendar] = await Promise.all([
+    loadProgress(userId, now.date, 6), listPlanYears(userId), listRoutines(userId), loadRoutineLogs(userId, addDays(now.date, -LOOKBACK_DAYS)), getCalendarEvents(),
+  ]);
+  // Timed events of the planned day become fixed blocks the plan works around.
+  const busy = (calendar.status === "ok" ? calendar.events : [])
+    .filter((e) => !e.allDay)
+    .map((e) => ({ s: nowIL(new Date(e.start)), e: nowIL(new Date(e.end)), title: e.title }))
+    .filter((x) => x.s.date === dp.date)
+    .map((x) => ({ start: x.s.minutes, end: x.e.date === dp.date ? Math.max(x.e.minutes, x.s.minutes + 15) : 24 * 60 - 1, title: x.title }));
+  const routineDue = dueOccurrences(routineRows, routineLogs, dp.date)
+    .map((o) => ({ id: o.routine.id, title: o.routine.title, date: o.date, startMin: o.routine.startMin, estMinutes: o.routine.estMinutes, goal: o.routine.goal, flexible: o.routine.flexible, late: o.late }));
   // What the yearly plan asks for this week, against what was actually done.
   const plan = activePlan(planRows, Number(now.date.slice(0, 4)));
   const thisWeek = weekly[weekly.length - 1];
@@ -39,6 +52,7 @@ export async function buildDay(userId: string, at: Date = new Date()) {
       clients: clientRows,
       content: contentRows.map((c) => ({ id: c.id, title: c.title, format: c.format, status: c.status, plannedAt: c.plannedAt, publishedAt: c.publishedAt, hasMetrics: Object.keys(c.metrics ?? {}).length > 0 })),
       leads: leadRows.map((l) => ({ id: l.id, name: l.name, stage: l.stage, nextAt: l.nextAt ? todayIL(l.nextAt) : null, nextStep: l.nextStep })),
+      routines: routineDue,
       manual: taskRows.map((t) => ({ id: t.id, title: t.title, dueAt: t.dueAt, important: t.important, estMinutes: t.estMinutes, goal: t.goal, quadrantOverride: t.quadrantOverride, status: t.status, postponed: t.postponed })),
     },
     dp.date
@@ -56,7 +70,7 @@ export async function buildDay(userId: string, at: Date = new Date()) {
     planYear: plan?.year ?? null,
     moneyToday,
     nowMinutes: now.minutes,
-    plan: planDay(priorityTasks, dp.cursor),
+    plan: planDay(priorityTasks, dp.cursor, busy),
     planDate: dp.date,
     isToday: dp.isToday,
     today: now.date,
