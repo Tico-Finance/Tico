@@ -610,3 +610,47 @@ export const partnerEvents = pgTable("partner_events", {
   hook: text("hook"),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ── Clients (journey through a work process) ──
+// No financial details are stored here. The case itself lives in Smart NPV.
+
+export const clients = pgTable("clients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  // One of the process keys in lib/clients.ts.
+  process: text("process").notNull().default("second_hand_tabu"),
+  stageIndex: integer("stage_index").notNull().default(0),
+  stageStartedAt: date("stage_started_at", { mode: "string" }),
+  stageDueAt: date("stage_due_at", { mode: "string" }),
+  // active | completed | archived
+  status: text("status").notNull().default("active"),
+  // Key of the update message waiting to be sent to the client (enter:docs, done, milestone:rate_ok...).
+  pendingMessage: text("pending_message"),
+  leadId: uuid("lead_id").references((): AnyPgColumn => leads.id, { onDelete: "set null" }),
+  notes: text("notes").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const clientEvents = pgTable("client_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references((): AnyPgColumn => clients.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // created, stage_done, milestone, update_sent, process_changed, stage_set, note
+  kind: text("kind").notNull(),
+  text: text("text").notNull().default(""),
+  stageKey: text("stage_key"),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+});
