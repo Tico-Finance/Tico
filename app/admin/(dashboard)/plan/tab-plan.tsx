@@ -49,7 +49,7 @@ export default function TabPlan({
     [1, "הוצאות", costMin === costMax ? `${money(costMin)} בחודש` : `${money(costMin)} עד ${money(costMax)}`],
     [2, "סוגי תיקים", `${p.types.length} סוגים`],
     [3, "זמן וגבייה", `${Math.round(P1.upfrontShare * 100)}% מראש`],
-    [4, "המרות", `${dec(avgConv)}% ליד לחתימה`],
+    [4, "המרות", `${dec(avgConv)}% ליד להגשה`],
     [5, "לידים ותוכן", `${p.chans.length} ערוצים`],
   ];
 
@@ -225,12 +225,12 @@ export default function TabPlan({
           </Card>
         </More>
 
-        <More title="המשפך ושבוע רגיל" sub="מליד לחתימה, ומה זה אומר לשבוע אחד">
+        <More title="המשפך ושבוע רגיל" sub="מליד להסכם ולהגשה, ומה זה אומר לשבוע אחד">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4">
             <Card>
               <h3 className="mb-3.5 font-bold">שנה קדימה</h3>
               <div className="flex flex-col gap-2.5">
-                {([["לידים", cur.leads, null], ["פגישות", cur.meet, cur.meet / cur.leads], ["הגשות לבנקים", cur.sub, cur.sub / cur.meet], ["תיקים חתומים", cur.cases, cur.cases / cur.sub]] as [string, number, number | null][]).map(([l, v, r]) => (
+                {([["לידים", cur.leads, null], ["פגישות", cur.meet, cur.meet / cur.leads], ["הסכמי התקשרות", cur.sub, cur.sub / cur.meet], ["הגשות לבנקים", cur.cases, cur.cases / cur.sub]] as [string, number, number | null][]).map(([l, v, r]) => (
                   <div key={l} className="grid grid-cols-[110px_1fr_140px] items-center gap-3 max-sm:grid-cols-[1fr_auto]">
                     <b className="text-sm">{l}</b>
                     <div className="h-6 overflow-hidden rounded max-sm:order-3 max-sm:col-span-2" style={{ background: "var(--pl-soft)" }}>
@@ -245,14 +245,14 @@ export default function TabPlan({
             <Card>
               <h3 className="mb-3.5 font-bold">שבוע רגיל</h3>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2.5">
-                {([["לידים חדשים", w.leads], ["פגישות", w.meet], ["הגשות לבנקים", w.sub], ["תיקים חתומים", w.cases]] as [string, number][]).map(([l, v]) => (
+                {([["לידים חדשים", w.leads], ["פגישות", w.meet], ["חתימות על הסכם", w.sub], ["הגשות לבנקים", w.cases]] as [string, number][]).map(([l, v]) => (
                   <div key={l} className="rounded-lg p-3" style={{ background: "var(--pl-soft)" }}>
                     <span className="block text-xs text-foreground/70">{l}</span><b className="text-lg"><Num>{dec(v)}</Num> בשבוע</b>
                   </div>
                 ))}
                 <div className="rounded-lg p-3" style={{ background: "var(--pl-soft)" }}>
                   <span className="block text-xs text-foreground/70">בחודש</span>
-                  <b className="text-lg"><Num>{dec(w.leads * WPM)}</Num> לידים · <Num>{dec(w.cases * WPM)}</Num> חתימות</b>
+                  <b className="text-lg"><Num>{dec(w.leads * WPM)}</Num> לידים · <Num>{dec(w.cases * WPM)}</Num> הגשות</b>
                 </div>
               </div>
             </Card>
@@ -260,7 +260,7 @@ export default function TabPlan({
         </More>
 
         <More title="כל סוג עסקה: ציר זמן ורווחיות" sub="מתי נכנס הכסף, ומה משתלם יותר לשעת עבודה">
-          <p className="text-sm text-foreground/60">ציר הזמן מראה מתי נכנס כסף מרגע שהליד מגיע. עיגול הוא גבייה, מעוין הוא חתימה.</p>
+          <p className="text-sm text-foreground/60">ציר הזמן מראה מתי נכנס כסף מרגע שהליד מגיע. עיגול הוא גבייה, מעוין הוא הגשה.</p>
           <Card className="overflow-x-auto">
             <table className="pl-table">
               <thead><tr><th>סוג תיק</th><th className="min-w-[300px]">ציר זמן (חודשים מהליד)</th><th>ממוצע עד כסף</th><th>שווי ליד</th><th>עמלה לשעה</th></tr></thead>
@@ -279,7 +279,7 @@ export default function TabPlan({
           </Card>
           <Card className="overflow-x-auto">
             <table className="pl-table">
-              <thead><tr><th>סוג תיק</th><th>עמלה</th><th>תיקים</th><th>הכנסה</th><th className="min-w-[110px]">חלק מההכנסה</th><th>לידים</th><th>פגישות</th><th>הגשות</th></tr></thead>
+              <thead><tr><th>סוג תיק</th><th>עמלה</th><th>תיקים</th><th>הכנסה</th><th className="min-w-[110px]">חלק מההכנסה</th><th>לידים</th><th>פגישות</th><th>הסכמים</th></tr></thead>
               <tbody>
                 {ts.map((t) => (
                   <tr key={t.id}>
@@ -319,8 +319,8 @@ export default function TabPlan({
                 {([
                   ["לידים", (m: number) => dec(cur.tot.leads[m])],
                   ["פגישות", (m: number) => dec(cur.tot.meet[m])],
-                  ["הגשות", (m: number) => dec(cur.tot.sub[m])],
-                  ["חתימות", (m: number) => dec(cur.tot.signed[m])],
+                  ["חתימות על הסכם", (m: number) => dec(cur.tot.sub[m])],
+                  ["הגשות", (m: number) => dec(cur.tot.signed[m])],
                   ["הכנסה", (m: number) => kfmt(cur.tot.income[m]), true],
                   ["הוצאות", (m: number) => kfmt(cur.costM[m] + cur.marketing / N)],
                   ["נטו בחודש", (m: number) => kfmt(cur.tot.income[m] - cur.costM[m] - cur.marketing / N)],
@@ -339,7 +339,7 @@ export default function TabPlan({
               <thead><tr><th /> {plans.map((s, i) => <th key={s.k}><span className="mb-2 block h-1 rounded" style={{ background: SCEN[i].color }} /><span className="block text-xl font-extrabold text-foreground">{SCEN[i].label}</span></th>)}</tr></thead>
               <tbody>
                 {([
-                  ["תיקים חתומים", (s: Plan) => <Num key="a">{dec(s.cases)}</Num>],
+                  ["תיקים שהוגשו", (s: Plan) => <Num key="a">{dec(s.cases)}</Num>],
                   ["הכנסה שנתית (נכנסת לחשבון)", (s: Plan) => <Num key="b">{money(s.income)}</Num>],
                   ["הוצאות (קבועות, צוות ופרסום)", (s: Plan) => <Num key="c">{money(s.costs)}</Num>],
                   ["תוצאה בסוף השנה", (s: Plan) => <><Num>{money(s.net)}</Num> {s.net >= 0 ? <Pill tone="good">✓ רווח</Pill> : <Pill tone="bad">✕ גירעון</Pill>}</>, true],
@@ -363,7 +363,7 @@ export default function TabPlan({
       <ul className="max-w-3xl list-disc ps-5 text-xs text-foreground/50">
         <li>ההכנסה נספרת בחודש שבו הכסף נגבה, לפי אחוזי הגבייה והחודשים שהגדרת לכל סוג תיק (החודש נספר מרגע קבלת הליד). נספרת רק גבייה מלקוחות שנחתמו, ובתיקים הפתוחים נספרת רק היתרה שעוד לא נגבתה.</li>
         <li>אחוזי ההמרה קבועים לאורך השנה, ובחודשי הקיץ יש פחות לידים. תרחיש &quot;חצי&quot; ו&quot;פי 1.5&quot; מכפילים את כל הפעילות.</li>
-        <li>ההוצאות כוללות הוצאות קבועות, צוות ומתפעלים שהגדרת, ופרסום ממומן. התשלום למתפעל נחשב ביום החתימה על התיק.</li>
+        <li>ההוצאות כוללות הוצאות קבועות, צוות ומתפעלים שהגדרת, ופרסום ממומן. התשלום למתפעל נחשב ביום הגשת התיק.</li>
       </ul>
     </div>
   );

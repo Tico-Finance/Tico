@@ -12,8 +12,8 @@ export type Expenses = Record<string, ExpenseEntry>;
 export const METRICS: { key: keyof Totals; field: keyof Pick<DayEntry, "leads" | "meetings" | "submissions" | "signed" | "cash">; label: string }[] = [
   { key: "leads", field: "leads", label: "לידים חדשים" },
   { key: "meet", field: "meetings", label: "פגישות" },
-  { key: "sub", field: "submissions", label: "הגשות לבנקים" },
-  { key: "signed", field: "signed", label: "תיקים חתומים" },
+  { key: "sub", field: "signed", label: "הסכמי התקשרות שנחתמו" },
+  { key: "signed", field: "submissions", label: "תיקים שהוגשו לבנקים" },
   { key: "income", field: "cash", label: "כסף שנכנס" },
 ];
 
@@ -121,8 +121,8 @@ export function buildForecast(P1: Plan, days: Days, expenses: Expenses, hor: Hor
   const pace: Record<string, number> = {
     leads: paceOf("leads", "leads", 8),
     meet: paceOf("meet", "meetings", 4),
-    sub: paceOf("sub", "submissions", 3),
-    signed: paceOf("signed", "signed", 2),
+    sub: paceOf("sub", "signed", 3),
+    signed: paceOf("signed", "submissions", 2),
     income: paceOf("income", "cash", 20000),
   };
   const rows: ForecastRow[] = METRICS.map((m) => {
@@ -167,14 +167,14 @@ export function buildVerdict(plans: Plan[], days: Days, today: Date, ps: Date): 
   const nDays = Math.round((t.getTime() - ps.getTime()) / 864e5);
   const weekNow = Math.min(52, Math.max(1, Math.floor(nDays / 7)));
   const planSig = planSum(P1, "signed", ps, t, ps);
-  const actSig = actSum(days, "signed", ps, t);
+  const actSig = actSum(days, "submissions", ps, t);
   const planLd = planSum(P1, "leads", ps, t, ps);
   const actLd = actSum(days, "leads", ps, t);
   const basis = planSig >= 1 ? "signed" : "leads";
   const pace = basis === "signed" ? actSig / planSig : planLd > 0 ? actLd / planLd : 1;
   const cP = cumSigned(P1);
   const Pl = (x: number) => atCum(cP, x);
-  const actC = (i: number) => (i <= 0 ? 0 : actSum(days, "signed", ps, i >= weekNow ? t : addD(ps, 7 * i - 1)));
+  const actC = (i: number) => (i <= 0 ? 0 : actSum(days, "submissions", ps, i >= weekNow ? t : addD(ps, 7 * i - 1)));
   const aw = actC(weekNow);
   const final = basis === "signed" ? aw + pace * (Pl(52) - Pl(weekNow)) : P1.cases * pace;
   const ratio = final / P1.cases;
@@ -207,8 +207,8 @@ export function buildDemo(P1: Plan, today: Date, ps: Date): { days: DayEntry[]; 
       date: dk(d), demo: true,
       leads: Math.round(r("leads") * w * 1.1),
       meetings: Math.round(r("meet") * w * 1.1),
-      submissions: Math.round(r("sub") * w),
-      signed,
+      signed: Math.round(r("sub") * w),
+      submissions: signed,
       cash: Math.round(signed * 9000 + r("income") * 0.3),
       notes: "",
     });
