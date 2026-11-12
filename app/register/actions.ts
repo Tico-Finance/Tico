@@ -50,7 +50,7 @@ export async function registerAction(
 
   // Sign the new advisor straight in.
   try {
-    await signIn("credentials", { email, password, redirectTo: "/admin/rtm" });
+    await signIn("credentials", { email, password, redirectTo: "/admin/home" });
     return { error: null };
   } catch (err) {
     if (err instanceof AuthError) {

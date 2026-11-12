@@ -21,7 +21,7 @@ export const QUADRANTS: Record<Quadrant, { title: string; hint: string }> = {
   4: { title: "לא דחוף ולא חשוב", hint: "תדחה או תמחק" },
 };
 
-export type TaskSource = "partner" | "client" | "content" | "lead" | "manual";
+export type TaskSource = "partner" | "client" | "content" | "lead" | "manual" | "routine";
 
 export interface PriorityTask {
   key: string;
@@ -42,6 +42,8 @@ export interface PriorityTask {
   quadrant: Quadrant;
   due: string | null;
   late: boolean;
+  /** Routines with a fixed time: minutes from midnight. */
+  startMin?: number | null;
 }
 
 export interface PriorityInput {
@@ -49,6 +51,7 @@ export interface PriorityInput {
   clients: { id: string; name: string; process: string; stageIndex: number; stageDueAt: string | null; status: string; pendingMessage: string | null }[];
   content: { id: string; title: string; format: string; status: string; plannedAt: string | null; publishedAt: string | null; hasMetrics: boolean }[];
   leads: { id: string; name: string; stage: string; nextAt: string | null; nextStep: string | null }[];
+  routines?: { id: string; title: string; date: string; startMin: number | null; estMinutes: number; goal: string; flexible: boolean; late: boolean }[];
   manual: { id: string; title: string; dueAt: string | null; important: boolean; estMinutes: number; goal: string; quadrantOverride: number | null; status: string; postponed?: number }[];
 }
 
@@ -61,7 +64,7 @@ const MANUAL_MONEY: Record<string, number> = { revenue: 80, growth: 40, exposure
 
 export function buildPriorityTasks(input: PriorityInput, today: string): PriorityTask[] {
   const out: PriorityTask[] = [];
-  const add = (t: Omit<PriorityTask, "quadrant" | "late" | "postponed"> & { late?: boolean; quadrant?: Quadrant; postponed?: number }) =>
+  const add = (t: Omit<PriorityTask, "quadrant" | "late" | "postponed"> & { late?: boolean; quadrant?: Quadrant; postponed?: number; startMin?: number | null }) =>
     out.push({ ...t, late: t.late ?? false, postponed: t.postponed ?? 0, quadrant: t.quadrant ?? quadrantOf(t.urgent, t.important) });
 
   for (const p of input.partners) {
@@ -144,6 +147,17 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
     });
   }
 
+  // Weekly routines: on their day they are important; unless flexible they are also urgent.
+  for (const r of input.routines ?? []) {
+    const goal = (["revenue", "growth", "exposure", "admin"].includes(r.goal) ? r.goal : "admin") as Goal;
+    add({
+      key: `r:${r.id}:${r.date}`, source: "routine", id: r.id, title: r.title,
+      sub: r.late ? "הרגל קבוע · לא סומן בימים האחרונים" : r.startMin !== null ? `הרגל קבוע · ${hhmm(r.startMin)}` : "הרגל קבוע",
+      href: "/admin/routines", goal, est: r.estMinutes, money: MANUAL_MONEY[goal] ?? 5,
+      urgent: !r.flexible || r.late, important: true, due: r.date, late: r.late, startMin: r.late ? null : r.startMin,
+    });
+  }
+
   const dueKey = (t: PriorityTask) => t.due ?? "9999-12-31";
   return out.sort((a, b) => a.quadrant - b.quadrant || dueKey(a).localeCompare(dueKey(b)) || a.title.localeCompare(b.title, "he"));
 }
@@ -223,6 +237,7 @@ const GROUP_TITLE: Record<TaskSource, Record<1 | 2 | 3, string>> = {
   partner: { 1: "שותפים: פניות להיום", 2: "שותפים: פניות וביקורים", 3: "שותפים: משימות קטנות" },
   lead: { 1: "לידים לטיפול", 2: "לידים לטיפול", 3: "לידים: משימות קטנות" },
   content: { 1: "תוכן: להעלות היום", 2: "תוכן", 3: "תוכן: משימות קטנות" },
+  routine: { 1: "הרגלים קבועים", 2: "הרגלים קבועים", 3: "הרגלים קבועים" },
   manual: { 1: "משימות דחופות", 2: "משימות חשובות", 3: "משימות קטנות" },
 };
 
@@ -233,12 +248,30 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): Day
   const overflow: PriorityTask[] = [];
   let at = cursor;
 
+  // Routines with a fixed time are pinned first; everything else is planned around them.
+  const pinned = tasks.filter((t) => t.source === "routine" && t.startMin != null);
+  const fixed = pinned.map((t) => ({ start: t.startMin as number, end: (t.startMin as number) + t.est }));
+  for (const t of pinned) {
+    const start = t.startMin as number;
+    blocks.push({ start, end: start + t.est, title: t.title, quadrant: t.quadrant, goal: t.goal, keys: [t.key], overtime: start + t.est > WORK.end || undefined });
+  }
+  tasks = tasks.filter((t) => !pinned.includes(t));
+  // Moves a slot past any fixed block it would overlap.
+  const clear = (start: number, minutes: number) => {
+    for (let i = 0; i <= fixed.length; i++) {
+      const hit = fixed.find((f) => start < f.end && start + minutes > f.start);
+      if (!hit) break;
+      start = hit.end;
+    }
+    return start;
+  };
+
   const place = (title: string, items: PriorityTask[], quadrant: Quadrant, force: boolean) => {
     if (!items.length) return;
     const minutes = Math.max(10, roundUp(items.reduce((s, t) => s + t.est, 0), 5));
-    let start = at;
+    let start = clear(at, minutes);
     // A block that would run into lunch starts after it instead.
-    if (start < WORK.lunchEnd && start + minutes > WORK.lunchStart) start = Math.max(start, WORK.lunchEnd);
+    if (start < WORK.lunchEnd && start + minutes > WORK.lunchStart) start = clear(Math.max(start, WORK.lunchEnd), minutes);
     const end = start + minutes;
     if (end > WORK.end && !force) {
       overflow.push(...items);
@@ -265,17 +298,18 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): Day
   };
 
   // 1. Urgent and important: first, always placed.
-  for (const src of ["client", "lead", "partner", "content", "manual"] as TaskSource[]) {
+  for (const src of ["client", "lead", "partner", "content", "routine", "manual"] as TaskSource[]) {
     place(GROUP_TITLE[src][1], bySource(1).get(src) ?? [], 1, true);
   }
   // 2. Important, not urgent: the deep work (content) first, then outreach, in the best hours.
   const q2 = bySource(2);
   for (const t of q2.get("content") ?? []) place(`${GROUP_TITLE.content[2]}: ${t.title}`, [t], 2, false);
-  for (const src of ["client", "lead", "partner", "manual"] as TaskSource[]) place(GROUP_TITLE[src][2], q2.get(src) ?? [], 2, false);
+  for (const src of ["client", "lead", "partner", "routine", "manual"] as TaskSource[]) place(GROUP_TITLE[src][2], q2.get(src) ?? [], 2, false);
   // 3. Urgent, not important: one batch at the end.
   const q3 = rest.filter((t) => t.quadrant === 3);
   place("משימות קטנות בקבוצה", q3, 3, false);
 
+  blocks.sort((a, b) => a.start - b.start);
   return { blocks, overflow };
 }
 

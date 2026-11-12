@@ -9,25 +9,16 @@ const MAIN = [
   { href: "/admin/clients", label: "לקוחות", icon: "📁" },
 ];
 
-// Day-to-day screens that are not in the bar, then the older tools (kept until they are retired).
+// Day-to-day screens that are not in the bar.
 const MORE = [
+  { href: "/admin/routines", label: "הרגלים קבועים" },
   { href: "/admin/leads", label: "לידים" },
   { href: "/admin/progress", label: "השבוע שלי" },
   { href: "/admin/content", label: "מעקב תוכן" },
   { href: "/admin/plan", label: "תוכנית שנתית" },
   { href: "/admin/notifications", label: "התראות" },
 ];
-const OLD = [
-  { href: "/admin/canva", label: "תוכן" },
-  { href: "/admin/drafts", label: "טיוטות לאישור" },
-  { href: "/admin/import", label: "ייבוא פוסטים ידני" },
-  { href: "/admin/rtm", label: "RTM – בריפים יומיים" },
-  { href: "/admin/tikia", label: "תיקיה" },
-  { href: "/admin/subscribers", label: "רשימת תפוצה" },
-  { href: "/admin/topics", label: "נושאים" },
-  { href: "/admin/templates", label: "תבניות תמונה" },
-  { href: "/admin/history", label: "היסטוריה" },
-];
+const OLD = [{ href: "/admin/tikia", label: "תיקיה" }];
 
 export default function Nav({ email, logout }: { email?: string | null; logout: () => Promise<void> }) {
   const path = usePathname();
@@ -47,7 +38,7 @@ export default function Nav({ email, logout }: { email?: string | null; logout: 
           </Link>
         ))}
         <details className="mt-1 border-t border-black/5">
-          <summary className="cursor-pointer list-none px-3 py-2 text-xs text-foreground/60 [&::-webkit-details-marker]:hidden">כלים ישנים ▾</summary>
+          <summary className="cursor-pointer list-none px-3 py-2 text-xs text-foreground/60 [&::-webkit-details-marker]:hidden">עוד כלים ▾</summary>
           {OLD.map((m) => (
             <Link key={m.href} href={m.href} className="block rounded-lg px-3 py-1.5 text-sm text-foreground/70 hover:bg-primary/5">
               {m.label}
