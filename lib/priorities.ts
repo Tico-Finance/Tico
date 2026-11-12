@@ -224,6 +224,8 @@ export interface Block {
   keys: string[];
   /** Q1 work that runs past the end of the working day. */
   overtime?: boolean;
+  /** A fixed calendar event rather than planned work. */
+  calendar?: boolean;
 }
 
 export interface DayPlan {
@@ -243,7 +245,10 @@ const GROUP_TITLE: Record<TaskSource, Record<1 | 2 | 3, string>> = {
 
 const roundUp = (n: number, step: number) => Math.ceil(n / step) * step;
 
-export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): DayPlan {
+/** Something already fixed in the calendar (minutes from midnight) that the plan works around. */
+export interface Busy { start: number; end: number; title: string }
+
+export function planDay(tasks: PriorityTask[], cursor: number = WORK.start, busy: Busy[] = []): DayPlan {
   const blocks: Block[] = [];
   const overflow: PriorityTask[] = [];
   let at = cursor;
@@ -254,6 +259,11 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): Day
   for (const t of pinned) {
     const start = t.startMin as number;
     blocks.push({ start, end: start + t.est, title: t.title, quadrant: t.quadrant, goal: t.goal, keys: [t.key], overtime: start + t.est > WORK.end || undefined });
+  }
+  // A calendar event that overlaps a pinned routine is usually the same thing (the recording in both), so it is not drawn twice.
+  for (const b of busy.filter((x) => !fixed.some((f) => x.start < f.end && x.end > f.start))) {
+    fixed.push({ start: b.start, end: b.end });
+    blocks.push({ start: b.start, end: b.end, title: `ביומן: ${b.title}`, quadrant: 1, goal: "revenue", keys: [], calendar: true });
   }
   tasks = tasks.filter((t) => !pinned.includes(t));
   // Moves a slot past any fixed block it would overlap.

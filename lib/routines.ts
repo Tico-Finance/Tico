@@ -71,7 +71,7 @@ export function weekGrid(routines: RoutineRow[], logs: RoutineLog[], weekStart: 
 
 /** The routines Chico described, as editable starting points. */
 export const STARTER_ROUTINES: RoutineInput[] = [
-  { title: "הקלטת פודקאסט", weekdays: [2], estMinutes: 120, goal: "exposure", flexible: false },
+  { title: "הקלטת פודקאסט", weekdays: [2], startMin: 10 * 60 + 30, estMinutes: 90, goal: "exposure", flexible: false },
   { title: "עריכת הפרק", weekdays: [3], estMinutes: 120, goal: "exposure", flexible: false },
   { title: "עריכת סרטונים קצרים", weekdays: [4], estMinutes: 90, goal: "exposure", flexible: true },
   { title: "פרסום שבועי מתוזמן", weekdays: [0], estMinutes: 30, goal: "exposure", flexible: false },
