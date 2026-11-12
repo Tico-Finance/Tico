@@ -1,0 +1,25 @@
+-- Safe to run more than once. Creates the content tracking table (migration 0008).
+CREATE TABLE IF NOT EXISTS "content_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade,
+	"code" text NOT NULL,
+	"title" text NOT NULL,
+	"platform" text DEFAULT 'instagram' NOT NULL,
+	"format" text DEFAULT 'post' NOT NULL,
+	"topic" text,
+	"status" text DEFAULT 'idea' NOT NULL,
+	"planned_at" date,
+	"published_at" date,
+	"url" text,
+	"caption" text DEFAULT '' NOT NULL,
+	"notes" text DEFAULT '' NOT NULL,
+	"draft_post_id" uuid REFERENCES "public"."draft_posts"("id") ON DELETE set null,
+	"metrics" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"metrics_at" timestamp with time zone,
+	"screenshots" text[] DEFAULT '{}' NOT NULL,
+	"insights" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "content_items_user_code_unique" UNIQUE("user_id","code"),
+	CONSTRAINT "content_items_user_draft_unique" UNIQUE("user_id","draft_post_id")
+);

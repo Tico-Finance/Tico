@@ -50,3 +50,14 @@ export async function uploadTikiaDocument(
   });
   return blob.url;
 }
+
+export async function uploadContentScreenshot(buffer: Buffer, contentType = "image/png"): Promise<string> {
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const pathname = `content-screenshots/${crypto.randomUUID()}.${ext}`;
+  const blob = await put(pathname, buffer, {
+    access: "public",
+    ...storeOptions(),
+    contentType,
+  });
+  return blob.url;
+}
