@@ -5,6 +5,7 @@ import {
   uuid,
   integer,
   boolean,
+  date,
   jsonb,
   pgEnum,
   unique,
@@ -541,4 +542,71 @@ export const canvaConnections = pgTable("canva_connections", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+// ── Partners (brokers, sales offices, brokerages) ──
+// Stage and kind are plain text on purpose (validated in lib/partners.ts) so the
+// workflow can evolve without ALTER TYPE migrations.
+
+export const partners = pgTable(
+  "partners",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // broker | sales | office
+    kind: text("kind").notNull().default("broker"),
+    name: text("name").notNull(),
+    org: text("org"),
+    instagram: text("instagram"),
+    phone: text("phone"),
+    area: text("area"),
+    address: text("address"),
+    // Visit route grouping for offices (e.g. "מסלול הרצל").
+    route: text("route"),
+    why: text("why"),
+    channel: text("channel"),
+    // Kind-specific extras for sales offices / projects (developer, marketer, units, priceFrom...).
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    priority: text("priority"),
+    // 1 | 2 | quiet | last | tbd
+    wave: text("wave"),
+    // Opening-message hook being tested (h_q, h_card, s_desk...).
+    hook: text("hook"),
+    stage: text("stage").notNull().default("cold"),
+    nextAction: text("next_action"),
+    nextAt: date("next_at", { mode: "string" }),
+    followDate: date("follow_date", { mode: "string" }),
+    coupon: boolean("coupon").notNull().default(false),
+    couponCode: text("coupon_code"),
+    notes: text("notes").notNull().default(""),
+    archived: boolean("archived").notNull().default(false),
+    archiveReason: text("archive_reason"),
+    // Lets an importer or scanner re-send the same find without creating duplicates.
+    externalKey: text("external_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique("partners_user_external_key_unique").on(t.userId, t.externalKey)]
+);
+
+export const partnerEvents = pgTable("partner_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references((): AnyPgColumn => partners.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // follow, sentMsg, sentReminder, replied, visit, note, ...
+  kind: text("kind").notNull(),
+  text: text("text").notNull().default(""),
+  // The hook the partner had when this happened, so reply rates can be measured per hook.
+  hook: text("hook"),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });
