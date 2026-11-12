@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ALL_MESSAGES,
   CLIENT_STATUS_LABELS,
@@ -20,6 +20,7 @@ import {
   advanceClientAction,
   createClientAction,
   milestoneAction,
+  undoClientActionAction,
   updateClientAction,
   updateSentAction,
 } from "./actions";
@@ -119,13 +120,15 @@ export default function ClientsApp({
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [flash, setFlash] = useState("");
   const [today] = useState(() => todayIL());
 
-  const say = (m: string) => {
-    setFlash(m);
-    setTimeout(() => setFlash(""), 2600);
-  };
+  const [toast, setToast] = useState<{ text: string; undoId: string | null } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), toast.undoId ? 7000 : 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const say = (m: string, undoFor: string | null = null) => setToast({ text: m, undoId: undoFor });
   const replaceRow = (c: ClientRow) => setRows((rs) => rs.map((r) => (r.id === c.id ? c : r)));
   const addEvents = (...e: ClientEventRow[]) => setEvents((es) => [...e, ...es]);
 
@@ -136,7 +139,16 @@ export default function ClientsApp({
     if (!res.ok) return say(res.error);
     replaceRow(res.client);
     addEvents(res.event);
-    say(res.event.text);
+    say(res.event.text, c.id);
+  }
+  async function undo(c: ClientRow) {
+    setBusy(true);
+    const res = await undoClientActionAction(c.id);
+    setBusy(false);
+    if (!res.ok) return say(res.error);
+    replaceRow(res.client);
+    setEvents((es) => es.filter((e) => e.id !== res.removedEventId));
+    say("הפעולה בוטלה");
   }
   async function milestone(c: ClientRow, key: string) {
     setBusy(true);
@@ -145,7 +157,7 @@ export default function ClientsApp({
     if (!res.ok) return say(res.error);
     replaceRow(res.client);
     addEvents(res.event);
-    say(res.event.text);
+    say(res.event.text, c.id);
   }
   async function sent(c: ClientRow) {
     setBusy(true);
@@ -154,7 +166,7 @@ export default function ClientsApp({
     if (!res.ok) return say(res.error);
     replaceRow(res.client);
     addEvents(res.event);
-    say("סומן שנשלח");
+    say("סומן שנשלח", c.id);
   }
   async function patch(c: ClientRow, p: Record<string, unknown>) {
     const res = await updateClientAction(c.id, p);
@@ -285,6 +297,7 @@ export default function ClientsApp({
           busy={busy}
           today={today}
           onClose={() => setOpenId(null)}
+          undo={() => undo(open)}
           advance={() => advance(open)}
           milestone={(k) => milestone(open, k)}
           sent={() => sent(open)}
@@ -297,9 +310,14 @@ export default function ClientsApp({
           say={say}
         />
       )}
-      {flash && (
+      {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex justify-center md:bottom-6">
-          <span className="rounded-full bg-primary px-4 py-2 text-sm text-white shadow-lg">{flash}</span>
+          <span className="pointer-events-auto flex items-center gap-3 rounded-full bg-primary px-4 py-2 text-sm text-white shadow-lg">
+            {toast.text}
+            {toast.undoId && (
+              <button onClick={() => { const c = rows.find((r) => r.id === toast.undoId); if (c) void undo(c); }} className="rounded-full bg-white/20 px-3 py-0.5 font-bold">בטל</button>
+            )}
+          </span>
         </div>
       )}
     </div>
@@ -309,19 +327,20 @@ export default function ClientsApp({
 // ── Detail drawer ──
 
 function Drawer({
-  c, events, busy, today, onClose, advance, milestone, sent, patch, addNote, say,
+  c, events, busy, today, onClose, undo, advance, milestone, sent, patch, addNote, say,
 }: {
   c: ClientRow;
   events: ClientEventRow[];
   busy: boolean;
   today: string;
   onClose: () => void;
+  undo: () => void;
   advance: () => void;
   milestone: (key: string) => void;
   sent: () => void;
   patch: (p: Record<string, unknown>) => void;
   addNote: (t: string) => Promise<void>;
-  say: (m: string) => void;
+  say: (m: string, undoFor?: string | null) => void;
 }) {
   const [note, setNote] = useState("");
   const [tplKey, setTplKey] = useState(currentMessageKey(c));
@@ -350,6 +369,12 @@ function Drawer({
             {milestonesFor(stageOf(c.process, c.stageIndex)?.key).map((m) => (
               <button key={m.key} disabled={busy} className={ghost} onClick={() => milestone(m.key)}>{m.label}</button>
             ))}
+          </div>
+        )}
+
+        {events.some((e) => e.undoable) && (
+          <div className="mb-3">
+            <button disabled={busy} className={ghost} onClick={undo}>בטל פעולה אחרונה</button>
           </div>
         )}
 

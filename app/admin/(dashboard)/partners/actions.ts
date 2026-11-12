@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { partnerEvents, partners } from "@/drizzle/schema";
 import { currentUserId } from "@/lib/auth";
-import { applyPartnerAction, importPartners } from "@/lib/partners-db";
+import { applyPartnerAction, importPartners, undoPartnerAction } from "@/lib/partners-db";
 import {
   PARTNER_ACTIONS,
   partnerImportSchema,
@@ -135,4 +135,13 @@ export async function importPartnersAction(
   }
   const r = await importPartners(userId, parsed.data);
   return { ok: true, created: r.created.length, skipped: r.skipped, partners: r.created.map(toPartnerRow), events: r.events.map(toEventRow) };
+}
+
+/** Undo the latest action (stage change, message sent...) on a partner. */
+export async function undoPartnerActionAction(id: string): Promise<Result<{ partner: PartnerRow; removedEventId: string }>> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "לא מחובר" };
+  const r = await undoPartnerAction(userId, id);
+  if (!r) return { ok: false, error: "אין פעולה לבטל" };
+  return { ok: true, partner: toPartnerRow(r.partner), removedEventId: r.removedEventId };
 }
