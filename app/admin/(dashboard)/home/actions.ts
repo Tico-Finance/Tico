@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { currentUserId } from "@/lib/auth";
 import { taskInputSchema, taskPatchSchema } from "@/lib/tasks";
-import { createTask, deleteTask, updateTask } from "@/lib/tasks-db";
+import { createTask, deleteTask, postponeTask, updateTask } from "@/lib/tasks-db";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -32,6 +32,16 @@ export async function deleteTaskAction(id: string): Promise<Result> {
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "לא מחובר" };
   if (!(await deleteTask(userId, id))) return { ok: false, error: "לא נמצא" };
+  revalidatePath("/admin/home");
+  return { ok: true };
+}
+
+/** Move a manual task to another day (counted, so avoided tasks stand out). */
+export async function postponeTaskAction(id: string, dueAt: string): Promise<Result> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "לא מחובר" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueAt)) return { ok: false, error: "תאריך לא תקין" };
+  if (!(await postponeTask(userId, id, dueAt))) return { ok: false, error: "לא נמצא" };
   revalidatePath("/admin/home");
   return { ok: true };
 }

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tasks } from "@/drizzle/schema";
 
@@ -56,4 +56,14 @@ export async function updateTask(userId: string, id: string, patch: TaskPatch): 
 export async function deleteTask(userId: string, id: string): Promise<boolean> {
   const rows = await db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId))).returning({ id: tasks.id });
   return rows.length > 0;
+}
+
+/** Push a task to another day and count it, so tasks that keep getting avoided can be called out. */
+export async function postponeTask(userId: string, id: string, dueAt: string): Promise<TaskRecord | null> {
+  const [row] = await db
+    .update(tasks)
+    .set({ dueAt, quadrantOverride: null, postponed: sql`${tasks.postponed} + 1`, updatedAt: new Date() })
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+    .returning();
+  return row ?? null;
 }

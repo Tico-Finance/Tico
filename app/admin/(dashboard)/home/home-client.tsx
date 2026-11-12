@@ -11,19 +11,7 @@ import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast"
 import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
-import DayMatrix, { type DoneToday } from "./day-matrix";
-import type { DayPlan, Goal, PriorityTask } from "@/lib/priorities";
-
-export interface MatrixProps {
-  tasks: PriorityTask[];
-  plan: DayPlan;
-  planDate: string;
-  isToday: boolean;
-  today: string;
-  nextWorkday: string;
-  goals: Record<Goal, number>;
-  done: DoneToday;
-}
+import DayMatrix, { type MatrixProps } from "./day-matrix";
 
 const noopSubscribe = () => () => {};
 const isOpen = (s: LeadRow["stage"]) => s !== "client" && s !== "lost";

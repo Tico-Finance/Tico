@@ -33,6 +33,10 @@ export interface PriorityTask {
   goal: Goal;
   /** Estimated minutes. */
   est: number;
+  /** 0-100: how close this is to money coming in (clients and leads highest, admin lowest). */
+  money: number;
+  /** How many times a manual task was pushed to another day. */
+  postponed: number;
   urgent: boolean;
   important: boolean;
   quadrant: Quadrant;
@@ -45,7 +49,7 @@ export interface PriorityInput {
   clients: { id: string; name: string; process: string; stageIndex: number; stageDueAt: string | null; status: string; pendingMessage: string | null }[];
   content: { id: string; title: string; format: string; status: string; plannedAt: string | null; publishedAt: string | null; hasMetrics: boolean }[];
   leads: { id: string; name: string; stage: string; nextAt: string | null; nextStep: string | null }[];
-  manual: { id: string; title: string; dueAt: string | null; important: boolean; estMinutes: number; goal: string; quadrantOverride: number | null; status: string }[];
+  manual: { id: string; title: string; dueAt: string | null; important: boolean; estMinutes: number; goal: string; quadrantOverride: number | null; status: string; postponed?: number }[];
 }
 
 export const quadrantOf = (urgent: boolean, important: boolean): Quadrant =>
@@ -53,11 +57,12 @@ export const quadrantOf = (urgent: boolean, important: boolean): Quadrant =>
 
 const CONTENT_MINUTES: Record<string, number> = { post: 30, reel: 45, story: 10, carousel: 45, video: 60, podcast: 90, other: 30 };
 const HOT_PARTNER_STAGES = ["replied", "meeting", "met", "coupon"];
+const MANUAL_MONEY: Record<string, number> = { revenue: 80, growth: 40, exposure: 20, admin: 5 };
 
 export function buildPriorityTasks(input: PriorityInput, today: string): PriorityTask[] {
   const out: PriorityTask[] = [];
-  const add = (t: Omit<PriorityTask, "quadrant" | "late"> & { late?: boolean; quadrant?: Quadrant }) =>
-    out.push({ ...t, late: t.late ?? false, quadrant: t.quadrant ?? quadrantOf(t.urgent, t.important) });
+  const add = (t: Omit<PriorityTask, "quadrant" | "late" | "postponed"> & { late?: boolean; quadrant?: Quadrant; postponed?: number }) =>
+    out.push({ ...t, late: t.late ?? false, postponed: t.postponed ?? 0, quadrant: t.quadrant ?? quadrantOf(t.urgent, t.important) });
 
   for (const p of input.partners) {
     if (p.archived || p.stage === "dead" || !p.nextAt) continue;
@@ -70,6 +75,7 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
       sub: p.nextAction || STAGE_LABELS[p.stage as keyof typeof STAGE_LABELS] || "",
       href: `/admin/partners?open=${p.id}`, goal: "growth",
       est: p.stage === "meeting" ? 45 : visit ? 30 : 4,
+      money: HOT_PARTNER_STAGES.includes(p.stage) ? 85 : p.wave === "1" || p.priority === "גבוהה" ? 45 : 30,
       urgent: d <= 0, important, due: p.nextAt, late: d < 0,
     });
   }
@@ -77,7 +83,7 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
   for (const c of input.clients) {
     if (c.status !== "active") continue;
     const stage = stageOf(c.process, c.stageIndex);
-    const base = { source: "client" as const, id: c.id, href: `/admin/clients?open=${c.id}`, goal: "revenue" as const, important: true };
+    const base = { source: "client" as const, id: c.id, href: `/admin/clients?open=${c.id}`, goal: "revenue" as const, important: true, money: 100 };
     if (c.pendingMessage) {
       add({ ...base, key: `c:${c.id}`, title: `עדכון ללקוח: ${c.name}`, sub: messageByKey(c.pendingMessage)?.title ?? "הודעה מוכנה", est: 5, urgent: true, due: today });
       continue;
@@ -99,7 +105,7 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
       add({
         key: `k:${k.id}`, source: "content", id: k.id, title: k.title,
         sub: d < 0 ? "היה מתוכנן לפני" + ` ${-d} י׳` : d === 0 ? "מתוכנן להיום" : "מתוכנן בקרוב",
-        href: `/admin/content?open=${k.id}`, goal: "exposure", est: CONTENT_MINUTES[k.format] ?? 30,
+        href: `/admin/content?open=${k.id}`, goal: "exposure", est: CONTENT_MINUTES[k.format] ?? 30, money: 20,
         urgent: d <= 0, important: true, due: k.plannedAt, late: d < 0,
       });
     } else if (k.status === "published" && k.publishedAt && !k.hasMetrics) {
@@ -107,7 +113,7 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
       if (age >= 1 && age <= 7) {
         add({
           key: `m:${k.id}`, source: "content", id: k.id, title: `ביצועים: ${k.title}`, sub: "להעלות צילום ביצועים",
-          href: `/admin/content?open=${k.id}`, goal: "exposure", est: 5, urgent: false, important: true, due: null,
+          href: `/admin/content?open=${k.id}`, goal: "exposure", est: 5, money: 10, urgent: false, important: true, due: null,
         });
       }
     }
@@ -119,7 +125,8 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
     if (d > 2) continue;
     add({
       key: `l:${l.id}`, source: "lead", id: l.id, title: l.name, sub: l.nextStep || "ליד לטיפול", href: "/admin/leads",
-      goal: "revenue", est: 10, urgent: d <= 0, important: true, due: l.nextAt, late: d < 0,
+      goal: "revenue", est: 10, money: l.stage === "meeting" || l.stage === "conversation" ? 90 : 70,
+      urgent: d <= 0, important: true, due: l.nextAt, late: d < 0,
     });
   }
 
@@ -131,7 +138,8 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
       key: `t:${m.id}`, source: "manual", id: m.id, title: m.title,
       sub: m.dueAt ? (urgent ? "משימה ידנית · להיום או באיחור" : "משימה ידנית") : "משימה ידנית",
       href: "/admin/home", goal: (["revenue", "growth", "exposure", "admin"].includes(m.goal) ? m.goal : "admin") as Goal,
-      est: m.estMinutes, urgent: ov ? ov === 1 || ov === 3 : urgent, important: ov ? ov === 1 || ov === 2 : m.important,
+      est: m.estMinutes, money: MANUAL_MONEY[m.goal] ?? 5, postponed: m.postponed ?? 0,
+      urgent: ov ? ov === 1 || ov === 3 : urgent, important: ov ? ov === 1 || ov === 2 : m.important,
       due: m.dueAt, late: !!m.dueAt && diffDays(m.dueAt, today) < 0, quadrant: ov,
     });
   }
@@ -139,6 +147,26 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
   const dueKey = (t: PriorityTask) => t.due ?? "9999-12-31";
   return out.sort((a, b) => a.quadrant - b.quadrant || dueKey(a).localeCompare(dueKey(b)) || a.title.localeCompare(b.title, "he"));
 }
+
+// ── Focus: what to do first ──
+
+/** Higher is more worth doing now: urgent and important first, then the closest to money. */
+export function focusScore(t: PriorityTask): number {
+  const base = t.quadrant === 1 ? 400 : t.quadrant === 2 ? 200 : t.quadrant === 3 ? 20 : 0;
+  return base + t.money * 3 + (t.late ? 100 : 0) + Math.min(t.postponed, 2) * 15;
+}
+
+/** The tasks worth the day's first attention, best first. Quadrant 4 never appears. */
+export function rankForFocus(tasks: PriorityTask[], limit = 8): PriorityTask[] {
+  return tasks
+    .filter((t) => t.quadrant <= 3)
+    .sort((a, b) => focusScore(b) - focusScore(a) || a.est - b.est)
+    .slice(0, limit);
+}
+
+/** Money-first: the few actions closest to income, protected at the start of the day. */
+export const MONEY_FIRST_MIN_SCORE = 70;
+export const MONEY_FIRST_MAX_TASKS = 3;
 
 // ── Working days and the clock (Israel) ──
 
@@ -220,9 +248,19 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): Day
     at = end;
   };
 
+  // 0. Money first: the actions closest to income (clients, leads, warm partners, money tasks), before anything else.
+  const moneyFirst = tasks
+    .filter((t) => t.quadrant <= 2 && t.money >= MONEY_FIRST_MIN_SCORE)
+    .sort((a, b) => b.money - a.money || a.quadrant - b.quadrant || a.est - b.est)
+    .slice(0, MONEY_FIRST_MAX_TASKS);
+  const moneyKeys = new Set(moneyFirst.map((t) => t.key));
+  if (moneyFirst.length) {
+    place("כסף קודם: מה שמקרב הכנסה", moneyFirst, moneyFirst.some((t) => t.quadrant === 1) ? 1 : 2, true);
+  }
+  const rest = tasks.filter((t) => !moneyKeys.has(t.key));
   const bySource = (q: Quadrant) => {
     const groups = new Map<TaskSource, PriorityTask[]>();
-    for (const t of tasks.filter((x) => x.quadrant === q)) groups.set(t.source, [...(groups.get(t.source) ?? []), t]);
+    for (const t of rest.filter((x) => x.quadrant === q)) groups.set(t.source, [...(groups.get(t.source) ?? []), t]);
     return groups;
   };
 
@@ -235,7 +273,7 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start): Day
   for (const t of q2.get("content") ?? []) place(`${GROUP_TITLE.content[2]}: ${t.title}`, [t], 2, false);
   for (const src of ["client", "lead", "partner", "manual"] as TaskSource[]) place(GROUP_TITLE[src][2], q2.get(src) ?? [], 2, false);
   // 3. Urgent, not important: one batch at the end.
-  const q3 = tasks.filter((t) => t.quadrant === 3);
+  const q3 = rest.filter((t) => t.quadrant === 3);
   place("משימות קטנות בקבוצה", q3, 3, false);
 
   return { blocks, overflow };

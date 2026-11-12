@@ -11,6 +11,7 @@ const MAIN = [
 ];
 
 const MORE = [
+  { href: "/admin/progress", label: "השבוע שלי" },
   { href: "/admin/content", label: "מעקב תוכן" },
   { href: "/admin/canva", label: "תוכן" },
   { href: "/admin/plan", label: "תוכנית" },

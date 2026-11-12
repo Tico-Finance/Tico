@@ -14,3 +14,6 @@ CREATE TABLE IF NOT EXISTS "tasks" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
+-- Migration 0010: count how many times a task was pushed to another day.
+ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "postponed" integer DEFAULT 0 NOT NULL;

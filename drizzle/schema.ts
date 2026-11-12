@@ -718,6 +718,8 @@ export const tasks = pgTable("tasks", {
   goal: text("goal").notNull().default("admin"),
   // 1..4: forces the quadrant regardless of date and importance.
   quadrantOverride: integer("quadrant_override"),
+  // How many times the task was pushed to another day.
+  postponed: integer("postponed").notNull().default(0),
   // open | done | dropped
   status: text("status").notNull().default("open"),
   doneAt: timestamp("done_at", { withTimezone: true }),
