@@ -69,10 +69,10 @@ export function weekGrid(routines: RoutineRow[], logs: RoutineLog[], weekStart: 
   }));
 }
 
-/** The routines Chico described, as editable starting points. */
+/** The routines Chico described (the editing itself is done by Claude, so his part is sending the files and approving), as editable starting points. */
 export const STARTER_ROUTINES: RoutineInput[] = [
   { title: "הקלטת פודקאסט", weekdays: [2], startMin: 10 * 60 + 30, estMinutes: 90, goal: "exposure", flexible: false },
-  { title: "עריכת הפרק", weekdays: [3], estMinutes: 120, goal: "exposure", flexible: false },
-  { title: "עריכת סרטונים קצרים", weekdays: [4], estMinutes: 90, goal: "exposure", flexible: true },
-  { title: "פרסום שבועי מתוזמן", weekdays: [0], estMinutes: 30, goal: "exposure", flexible: false },
+  { title: "להעלות את ההקלטה לדרייב ולשלוח לקלוד לעריכה", weekdays: [2], startMin: 12 * 60, estMinutes: 15, goal: "exposure", flexible: false },
+  { title: "לעבור על הפרק הערוך ולאשר", weekdays: [3], estMinutes: 30, goal: "exposure", flexible: true },
+  { title: "פרסום הפרק והרילסים", weekdays: [4], startMin: 10 * 60, estMinutes: 30, goal: "exposure", flexible: false },
 ];

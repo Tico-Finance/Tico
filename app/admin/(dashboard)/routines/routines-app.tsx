@@ -40,7 +40,7 @@ export default function RoutinesApp({ routines, logs, weekStart, today }: { rout
         <section className={card}>
           <p className="mb-3 text-sm">עוד אין הרגלים. אפשר להתחיל מהמקובלים אצלך ולערוך אחר כך את הימים והשעות.</p>
           <button disabled={pending} onClick={() => run(async () => { for (const r of STARTER_ROUTINES) await createRoutineAction(r); return { ok: true }; })}
-            className="rounded-xl bg-button px-4 py-2 text-sm font-medium text-white">להוסיף: פודקאסט, עריכות, פרסום שבועי</button>
+            className="rounded-xl bg-button px-4 py-2 text-sm font-medium text-white">להוסיף: הקלטה, שליחה לעריכה, אישור ופרסום</button>
         </section>
       )}
 
