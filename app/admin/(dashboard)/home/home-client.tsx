@@ -12,6 +12,7 @@ import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
 import DayMatrix, { type MatrixProps } from "./day-matrix";
+import PushPrompt from "./push-prompt";
 
 const noopSubscribe = () => () => {};
 const isOpen = (s: LeadRow["stage"]) => s !== "client" && s !== "lost";
@@ -87,6 +88,7 @@ function Home({ leads, settings, days, calendar, matrix, today }: {
         )}
       </section>
 
+      <PushPrompt />
       <DayMatrix {...matrix} />
 
       <Target settings={settings} days={days} today={today} />

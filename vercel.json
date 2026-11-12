@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/tikia-scan",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/morning-push",
+      "schedule": "0 5 * * 0-4"
+    },
+    {
+      "path": "/api/cron/money-nudge",
+      "schedule": "0 8 * * 0-4"
     }
   ]
 }

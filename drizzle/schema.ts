@@ -731,3 +731,32 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .defaultNow(),
 });
+
+// ── Push notifications ──
+
+// The server's VAPID key pair (one row). Generated on first use, so no environment secret is needed.
+export const pushKeys = pgTable("push_keys", {
+  id: text("id").primaryKey().default("vapid"),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  // When each kind of notification was last sent, so a retry never sends it twice in a day.
+  lastMorningAt: timestamp("last_morning_at", { withTimezone: true }),
+  lastNudgeAt: timestamp("last_nudge_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
