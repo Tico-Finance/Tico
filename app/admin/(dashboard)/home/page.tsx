@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { leads, planEntries, planSettings } from "@/drizzle/schema";
+import { clients, contentItems, leads, partnerEvents, partners, planEntries, planSettings } from "@/drizzle/schema";
 import { currentUserId } from "@/lib/auth";
 import { planSettingsSchema } from "@/lib/business-plan/schemas";
 import type { DayEntry, PlanSettings } from "@/lib/business-plan/types";
 import type { LeadRow } from "../leads/leads-board";
 import { getCalendarEvents } from "@/lib/calendar";
+import { buildAgenda } from "@/lib/agenda";
+import { SENT_EVENT_KINDS, hoursAgo, todayIL } from "@/lib/partners";
 import HomeClient from "./home-client";
 
 export const metadata = { title: "היום שלי | Tico" };
@@ -53,5 +55,20 @@ export default async function HomePage() {
 
   const calendar = await getCalendarEvents();
 
-  return <HomeClient leads={initialLeads} settings={settings} days={days} calendar={calendar} />;
+  // What is waiting across partners, clients and content (Israel date).
+  const today = todayIL();
+  const [partnerRows, clientRows, contentRows, recentEvents] = await Promise.all([
+    db.select({ id: partners.id, name: partners.name, stage: partners.stage, nextAt: partners.nextAt, nextAction: partners.nextAction, archived: partners.archived })
+      .from(partners).where(and(eq(partners.userId, userId), eq(partners.archived, false))),
+    db.select({ id: clients.id, name: clients.name, process: clients.process, stageIndex: clients.stageIndex, stageDueAt: clients.stageDueAt, status: clients.status, pendingMessage: clients.pendingMessage })
+      .from(clients).where(and(eq(clients.userId, userId), eq(clients.status, "active"))),
+    db.select({ id: contentItems.id, title: contentItems.title, status: contentItems.status, plannedAt: contentItems.plannedAt })
+      .from(contentItems).where(and(eq(contentItems.userId, userId), eq(contentItems.status, "planned"))),
+    db.select({ kind: partnerEvents.kind, at: partnerEvents.at })
+      .from(partnerEvents).where(and(eq(partnerEvents.userId, userId), gte(partnerEvents.at, hoursAgo(36)))),
+  ]);
+  const sentToday = recentEvents.filter((e) => (SENT_EVENT_KINDS as string[]).includes(e.kind) && todayIL(e.at) === today).length;
+  const agenda = buildAgenda({ partners: partnerRows, clients: clientRows, content: contentRows, sentToday }, today);
+
+  return <HomeClient leads={initialLeads} settings={settings} days={days} calendar={calendar} agenda={agenda} />;
 }

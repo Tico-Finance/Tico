@@ -72,6 +72,9 @@ export function todayIL(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(now);
 }
 
+/** A moment this many hours in the past. */
+export const hoursAgo = (h: number): Date => new Date(Date.now() - h * 3_600_000);
+
 export function addDays(date: string, n: number): string {
   const d = new Date(`${date}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
