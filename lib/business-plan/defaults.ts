@@ -66,6 +66,7 @@ export function defaultSettings(today: Date): PlanSettings {
     fixed: 25000,
     open: 4,
     start: today.getMonth(),
+    end: 11,
     ref: 0.3,
     hours: 45,
     meetH: 1.5,

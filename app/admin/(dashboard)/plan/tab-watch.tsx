@@ -123,7 +123,7 @@ export default function TabWatch({
           <section className="flex flex-col gap-3">
             <h2 className="text-xl font-extrabold text-primary">לאן זה מוביל, בתיקים</h2>
             <Card className="flex flex-col gap-1.5 border-s-4" >
-              <p className="text-xs text-foreground/55">בקצב הנוכחי (<Num>{Math.round(vd.pace * 100)}%</Num> מהתכנון, לפי {vd.basis === "signed" ? "תיקים חתומים" : "לידים"})</p>
+              <p className="text-xs text-foreground/55">בקצב הנוכחי (<Num>{Math.round(vd.pace * 100)}%</Num> מהתכנון, לפי {vd.basis === "signed" ? "תיקים שהוגשו" : "לידים"})</p>
               <p className="text-2xl font-extrabold"><Num>{dec(vd.final)} תיקים</Num> <span className="text-base font-semibold text-foreground/70">בסוף השנה</span></p>
               <p>
                 זה <Num>{Math.round(vd.ratio * 100)}%</Num> מהיעד, {vd.near}.{" "}

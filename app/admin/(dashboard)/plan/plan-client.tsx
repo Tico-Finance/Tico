@@ -7,7 +7,7 @@ import { buildParams, buildPlan } from "@/lib/business-plan/model";
 import { buildDemo, type Hor, type Win } from "@/lib/business-plan/forecast";
 import { dk, pdt } from "@/lib/business-plan/dates";
 import { deletePlanEntriesAction, savePlanEntriesAction, savePlanSettingsAction } from "./actions";
-import { planStartOfYear, yearSettings, type YearSummary } from "@/lib/business-plan/targets";
+import { planStartOf, yearSettings, type YearSummary } from "@/lib/business-plan/targets";
 import { NeedsCard, YearBar } from "./year-bar";
 import { cx } from "./ui";
 import Wizard from "./wizard";
@@ -48,7 +48,7 @@ export default function PlanClient({ initial, ...year }: { initial: PlanData } &
 
 function PlanApp({ initial, today, year, closed, summary, years, canOpen }: { initial: PlanData; today: Date } & YearProps) {
   const [saved, setSaved] = useState<PlanSettings | null>(initial.settings);
-  const base = useMemo(() => yearSettings(saved ?? defaultSettings(planStartOfYear(year))), [saved, year]);
+  const base = useMemo(() => yearSettings(saved ?? defaultSettings(new Date(year, new Date().getFullYear() === year ? new Date().getMonth() : 0, 1))), [saved, year]);
   const S = base;
 
   const [view, setView] = useState<"wizard" | "dash">(initial.settings?.done ? "dash" : "wizard");
@@ -154,7 +154,7 @@ function PlanApp({ initial, today, year, closed, summary, years, canOpen }: { in
   const removeExpense = (k: string) => { setExpenses((m) => { const n = { ...m }; delete n[k]; return n; }); void unpersist("expense", [k]); };
 
   /* ---------- derived plan ---------- */
-  const ps = useMemo(() => planStartOfYear(year), [year]);
+  const ps = useMemo(() => planStartOf(S, year), [S, year]);
   const p = useMemo(() => buildParams(S, ps), [S, ps]);
   const plans = useMemo(() => [0.5, 1, 1.5].map((k) => buildPlan(p, k)), [p]);
 
@@ -183,7 +183,7 @@ function PlanApp({ initial, today, year, closed, summary, years, canOpen }: { in
   const openStep = (n: number) => { setStep(n); setView("wizard"); window.scrollTo(0, 0); };
   const reset = () => {
     if (!window.confirm("לאפס את ההגדרות לדוגמה? הדיווחים וההוצאות שהזנת לא יימחקו.")) return;
-    commitSettings(defaultSettings(planStartOfYear(year)));
+    commitSettings(defaultSettings(new Date(year, new Date().getFullYear() === year ? new Date().getMonth() : 0, 1)));
     openStep(0);
   };
 

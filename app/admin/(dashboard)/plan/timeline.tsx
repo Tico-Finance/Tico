@@ -18,7 +18,7 @@ export function Timeline({ lag, pay }: { lag: number; pay: Pay[] }) {
         </Marker>
         <Marker at={lag}>
           <i className="absolute top-[42px] -ms-1.5 block h-3 w-3 rotate-45" style={{ background: "currentColor" }} />
-          <span className="absolute top-[58px] -ms-8 whitespace-nowrap text-[11px] opacity-70">חתימה, חודש {lag}</span>
+          <span className="absolute top-[58px] -ms-8 whitespace-nowrap text-[11px] opacity-70">הגשה, חודש {lag}</span>
         </Marker>
         {pay.map((q) => {
           const size = 8 + q.pct * 10;

@@ -154,6 +154,15 @@ function StepGoal({ S, upd, planYear }: { S: PlanSettings; upd: Upd; planYear: n
         </div>
       </div>
 
+      <Q label="איזו תקופה התוכנית מכסה?" hint={`בתוך ${planYear}. אפשר להתחיל באמצע השנה ולסיים בדצמבר, או לתכנן שנה שלמה`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={S.start} label="מחודש" className="self-start" options={MONTHS.map((m, v) => ({ v, label: m }))}
+            onChange={(v) => upd((d) => { d.start = v; if ((d.end ?? 11) < v) d.end = v; })} />
+          <span className="text-foreground/60">עד</span>
+          <Select value={S.end ?? 11} label="עד חודש" className="self-start" options={MONTHS.map((m, v) => ({ v, label: m })).filter((o) => o.v >= S.start)}
+            onChange={(v) => upd((d) => { d.end = v; })} />
+        </div>
+      </Q>
       <Q label="כמה תיקים כבר פתוחים אצלך עכשיו?" hint="תיקים שעוד לא נחתמו">
         <NumInput value={S.open} unit="תיקים" label="תיקים פתוחים" className="self-start" onChange={(n) => upd((d) => { d.open = n; })} />
       </Q>
@@ -323,7 +332,7 @@ function StepPay({ S, upd }: { S: PlanSettings; upd: Upd }) {
     <>
       <h2 className="text-2xl font-extrabold text-primary">כמה זמן לוקח וכמה אתה גובה?</h2>
       <p className="text-sm text-foreground/60">
-        לכל סוג תיק: כמה חודשים עוברים מרגע שהליד מגיע ועד החתימה, ואיך אתה גובה את העמלה. הציר מראה מתי נכנס הכסף.
+        לכל סוג תיק: כמה חודשים עוברים מרגע שהליד מגיע ועד הגשת התיק, ואיך אתה גובה את העמלה. הציר מראה מתי נכנס הכסף.
       </p>
       <div className="flex flex-col gap-3">
         {S.types.map((t, i) => (t.on ? <PayCard key={t.id} t={t} i={i} upd={upd} /> : null))}
@@ -342,8 +351,8 @@ function PayCard({ t, i, upd }: { t: CaseType; i: number; upd: Upd }) {
         <span className="h-3 w-3 rounded-sm" style={{ background: `var(--pl-t${(i % 10) + 1})` }} />{t.n}
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="font-bold">מליד עד חתימה</span>
-        <Select value={t.lag} options={lagOpts} label="חודשים עד חתימה"
+        <span className="font-bold">מליד עד הגשה</span>
+        <Select value={t.lag} options={lagOpts} label="חודשים עד הגשה"
           onChange={(v) => set((x) => { x.lag = v; if (x.pay !== "custom") applyPay(x); })} />
       </div>
       <div className="font-bold">איך אתה גובה?</div>
@@ -374,8 +383,8 @@ function StepConv({ S, upd }: { S: PlanSettings; upd: Upd }) {
   const a = g.c1, b = (a * g.c2) / 100, c = (b * g.c3) / 100;
   const rows = [
     ["c1", "ליד שהופך לפגישה"],
-    ["c2", "פגישה שהופכת להגשה לבנקים"],
-    ["c3", "הגשה שהופכת לחתימה"],
+    ["c2", "פגישה שהופכת להסכם התקשרות חתום"],
+    ["c3", "הסכם חתום שהופך לתיק שמוגש לבנקים"],
   ] as const;
   return (
     <>
@@ -392,14 +401,14 @@ function StepConv({ S, upd }: { S: PlanSettings; upd: Upd }) {
       ))}
       <div className="rounded-xl bg-black/[.04] p-4 text-base">
         מתוך 100 לידים: <b><span className="num">{Math.round(a * 10) / 10}</span></b> פגישות,{" "}
-        <b><span className="num">{Math.round(b * 10) / 10}</span></b> הגשות לבנקים,{" "}
-        <b><span className="num">{Math.round(c * 10) / 10}</span></b> חתימות
+        <b><span className="num">{Math.round(b * 10) / 10}</span></b> הסכמי התקשרות,{" "}
+        <b><span className="num">{Math.round(c * 10) / 10}</span></b> הגשות לבנקים
       </div>
       <details>
         <summary className="cursor-pointer font-semibold text-primary">לדייק לכל סוג תיק בנפרד</summary>
         <div className="mt-3 overflow-x-auto">
           <table className="pl-table">
-            <thead><tr><th>סוג</th><th>ליד←פגישה</th><th>פגישה←הגשה</th><th>הגשה←חתימה</th></tr></thead>
+            <thead><tr><th>סוג</th><th>ליד←פגישה</th><th>פגישה←הסכם</th><th>הסכם←הגשה</th></tr></thead>
             <tbody>
               {S.types.map((t, i) =>
                 t.on ? (
