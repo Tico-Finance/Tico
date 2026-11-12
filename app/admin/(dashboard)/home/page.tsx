@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { leads, planEntries, planSettings } from "@/drizzle/schema";
+import { leads } from "@/drizzle/schema";
 import { currentUserId } from "@/lib/auth";
-import { planSettingsSchema } from "@/lib/business-plan/schemas";
-import type { DayEntry, PlanSettings } from "@/lib/business-plan/types";
+import type { PlanSettings } from "@/lib/business-plan/types";
+import { activePlan, listPlanYears, loadYearEntries } from "@/lib/plan-db";
+import { todayIL } from "@/lib/partners";
 import type { LeadRow } from "../leads/leads-board";
 import { getCalendarEvents } from "@/lib/calendar";
 import { buildDay } from "@/lib/day";
@@ -21,17 +22,10 @@ export default async function HomePage() {
     .from(leads)
     .where(eq(leads.userId, userId))
     .orderBy(desc(leads.createdAt));
-  const [settingsRow] = await db
-    .select()
-    .from(planSettings)
-    .where(eq(planSettings.userId, userId))
-    .limit(1);
-  const dayRows = await db.select().from(planEntries).where(eq(planEntries.userId, userId));
-
-  const parsed = settingsRow ? planSettingsSchema.safeParse(settingsRow.data) : null;
-  const settings: PlanSettings | null = parsed?.success ? parsed.data : null;
-  const days: Record<string, DayEntry> = {};
-  for (const e of dayRows) if (e.kind === "day") days[e.key] = e.data as unknown as DayEntry;
+  const thisYear = Number(todayIL().slice(0, 4));
+  const plan = activePlan(await listPlanYears(userId), thisYear);
+  const settings: PlanSettings | null = plan?.settings ?? null;
+  const days = plan ? (await loadYearEntries(userId, plan.year)).days : {};
 
   const initialLeads: LeadRow[] = rows.map((r) => ({
     id: r.id,

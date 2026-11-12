@@ -4,6 +4,8 @@ import { clientEvents, clients, contentItems, leads, partnerEvents, partners, ta
 import { SENT_EVENT_KINDS, addDays, hoursAgo, todayIL } from "@/lib/partners";
 import { buildPriorityTasks, dayToPlan, nextWorkday, nowIL, planDay, rankForFocus, summarizeGoals } from "@/lib/priorities";
 import { loadProgress } from "@/lib/progress-db";
+import { activePlan, listPlanYears } from "@/lib/plan-db";
+import { weekGoalRows, weeklyTargets } from "@/lib/business-plan/targets";
 
 /** Everything the home screen needs to show the day by the Eisenhower matrix. */
 export async function buildDay(userId: string, at: Date = new Date()) {
@@ -26,7 +28,11 @@ export async function buildDay(userId: string, at: Date = new Date()) {
     db.select({ kind: clientEvents.kind, at: clientEvents.at })
       .from(clientEvents).where(and(eq(clientEvents.userId, userId), gte(clientEvents.at, hoursAgo(36)))),
   ]);
-  const weekly = await loadProgress(userId, now.date, 6);
+  const [weekly, planRows] = await Promise.all([loadProgress(userId, now.date, 6), listPlanYears(userId)]);
+  // What the yearly plan asks for this week, against what was actually done.
+  const plan = activePlan(planRows, Number(now.date.slice(0, 4)));
+  const thisWeek = weekly[weekly.length - 1];
+  const weekGoals = plan?.settings ? weekGoalRows(weeklyTargets(plan.settings, plan.year, now.date), thisWeek) : [];
   const priorityTasks = buildPriorityTasks(
     {
       partners: partnerRows,
@@ -46,6 +52,8 @@ export async function buildDay(userId: string, at: Date = new Date()) {
     tasks: priorityTasks,
     ranked: rankForFocus(priorityTasks),
     weekly,
+    weekGoals,
+    planYear: plan?.year ?? null,
     moneyToday,
     nowMinutes: now.minutes,
     plan: planDay(priorityTasks, dp.cursor),

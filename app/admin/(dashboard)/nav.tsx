@@ -4,18 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const MAIN = [
-  { href: "/admin/home", label: "בית", icon: "🏠" },
-  { href: "/admin/leads", label: "לידים", icon: "👥" },
-  { href: "/admin/clients", label: "לקוחות", icon: "📁" },
+  { href: "/admin/home", label: "היום", icon: "🏠" },
   { href: "/admin/partners", label: "שותפים", icon: "🤝" },
+  { href: "/admin/clients", label: "לקוחות", icon: "📁" },
 ];
 
+// Day-to-day screens that are not in the bar, then the older tools (kept until they are retired).
 const MORE = [
+  { href: "/admin/leads", label: "לידים" },
   { href: "/admin/progress", label: "השבוע שלי" },
-  { href: "/admin/notifications", label: "התראות" },
   { href: "/admin/content", label: "מעקב תוכן" },
+  { href: "/admin/plan", label: "תוכנית שנתית" },
+  { href: "/admin/notifications", label: "התראות" },
+];
+const OLD = [
   { href: "/admin/canva", label: "תוכן" },
-  { href: "/admin/plan", label: "תוכנית" },
   { href: "/admin/drafts", label: "טיוטות לאישור" },
   { href: "/admin/import", label: "ייבוא פוסטים ידני" },
   { href: "/admin/rtm", label: "RTM – בריפים יומיים" },
@@ -43,6 +46,14 @@ export default function Nav({ email, logout }: { email?: string | null; logout: 
             {m.label}
           </Link>
         ))}
+        <details className="mt-1 border-t border-black/5">
+          <summary className="cursor-pointer list-none px-3 py-2 text-xs text-foreground/60 [&::-webkit-details-marker]:hidden">כלים ישנים ▾</summary>
+          {OLD.map((m) => (
+            <Link key={m.href} href={m.href} className="block rounded-lg px-3 py-1.5 text-sm text-foreground/70 hover:bg-primary/5">
+              {m.label}
+            </Link>
+          ))}
+        </details>
         <div className="mt-1 border-t border-black/5 px-3 pt-2 text-xs text-foreground/60">
           {email && <div className="mb-1 truncate">{email}</div>}
           <form action={logout}>

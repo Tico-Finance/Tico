@@ -1,0 +1,143 @@
+import type { DayEntry, PlanSettings } from "./types";
+import { buildParams, buildPlan, type Plan } from "./model";
+import { dim } from "./dates";
+
+// Everything the daily and weekly screens ask of him comes from the yearly plan: the income
+// target fixes how many files must be signed, which fixes meetings, leads, content and outreach.
+
+/** Share of partner messages that get an answer, and of answers that turn into a meeting. */
+export const REPLY_RATE = 0.25;
+export const MEETING_FROM_REPLY = 0.4;
+/** Units that count as published content. */
+const CONTENT_UNITS = ["פוסט", "סרטון"];
+
+/** The plan always covers one calendar year, so the start month is fixed to January. */
+export const yearSettings = (S: PlanSettings): PlanSettings => ({ ...S, start: 0 });
+export const planStartOfYear = (year: number) => new Date(year, 0, 1);
+
+export function yearPlan(S: PlanSettings, year: number, k = 1): Plan {
+  return buildPlan(buildParams(yearSettings(S), planStartOfYear(year)), k);
+}
+
+export interface ChannelTarget { name: string; unit: string; perWeek: number }
+
+export interface WeeklyTargets {
+  year: number;
+  /** Income the year is meant to bring in, and the plan's share for the current month. */
+  yearIncome: number;
+  monthIncome: number;
+  /** Per week, for the current month of the plan. */
+  leads: number;
+  meetings: number;
+  submissions: number;
+  cases: number;
+  /** Content pieces (posts + videos) per week. */
+  content: number;
+  /** Partner meetings per week, and the messages that take. */
+  partnerMeetings: number;
+  outreach: number;
+  channels: ChannelTarget[];
+  /** Working hours the plan needs per week. */
+  hours: number;
+}
+
+/** The weekly numbers the plan asks for in the month that contains `today` (YYYY-MM-DD). */
+export function weeklyTargets(S: PlanSettings, year: number, today: string): WeeklyTargets {
+  const P = yearPlan(S, year);
+  const y = Number(today.slice(0, 4));
+  const m = y === year ? Number(today.slice(5, 7)) - 1 : y < year ? 0 : 11;
+  const weeksInMonth = dim(year, m) / 7;
+  const wk = (a: number[]) => a[m] / weeksInMonth;
+  const channels: ChannelTarget[] = P.chans.map((c) => ({ name: c.n, unit: c.unit, perWeek: c.units / 52 }));
+  const partnerMeetings = channels.filter((c) => c.name.includes("שותפו")).reduce((a, c) => a + c.perWeek, 0);
+  const content = channels.filter((c) => CONTENT_UNITS.includes(c.unit)).reduce((a, c) => a + c.perWeek, 0);
+  return {
+    year,
+    yearIncome: S.target,
+    monthIncome: P.tot.income[m],
+    leads: wk(P.tot.leads),
+    meetings: wk(P.tot.meet),
+    submissions: wk(P.tot.sub),
+    cases: wk(P.tot.signed),
+    content,
+    partnerMeetings,
+    outreach: partnerMeetings / (REPLY_RATE * MEETING_FROM_REPLY),
+    channels,
+    hours: P.wk.total,
+  };
+}
+
+/** "What it takes" for the year, in plain numbers, for the top of the plan screen. */
+export function yearNeeds(S: PlanSettings, year: number) {
+  const P = yearPlan(S, year);
+  const w = weeklyTargets(S, year, `${year}-06-15`);
+  return {
+    target: S.target,
+    cases: P.cases,
+    avgFee: P.avgFee,
+    leads: P.leads,
+    meetings: P.meet,
+    content: w.content * 52,
+    outreach: w.outreach * 52,
+    hoursPerWeek: P.wk.total,
+    availableHours: S.hours,
+    net: P.net,
+  };
+}
+
+/** Frozen result of a year: plan vs actual per month, kept when the year is closed. */
+export interface YearSummary {
+  year: number;
+  target: number;
+  income: number;
+  months: { plan: number; actual: number }[];
+  leads: { plan: number; actual: number };
+  meetings: { plan: number; actual: number };
+  signed: { plan: number; actual: number };
+  costs: number;
+  note?: string;
+}
+
+export function summarizeYear(S: PlanSettings, year: number, days: Record<string, DayEntry>, expensesActual: number | null): YearSummary {
+  const P = yearPlan(S, year);
+  const months = Array.from({ length: 12 }, (_, m) => ({ plan: Math.round(P.tot.income[m]), actual: 0 }));
+  let leads = 0, meetings = 0, signed = 0;
+  for (const d of Object.values(days)) {
+    if (!d.date.startsWith(`${year}-`)) continue;
+    months[Number(d.date.slice(5, 7)) - 1].actual += d.cash;
+    leads += d.leads; meetings += d.meetings; signed += d.signed;
+  }
+  return {
+    year,
+    target: S.target,
+    income: months.reduce((a, x) => a + x.actual, 0),
+    months,
+    leads: { plan: Math.round(P.leads), actual: leads },
+    meetings: { plan: Math.round(P.meet), actual: meetings },
+    signed: { plan: Math.round(P.cases), actual: signed },
+    costs: Math.round(expensesActual ?? P.costs),
+  };
+}
+
+/** Next year's starting point: last year's assumptions, a fresh (unfinished) plan that opens in the wizard. */
+export function nextYearSettings(prev: PlanSettings): PlanSettings {
+  const next = structuredClone(prev);
+  next.done = false;
+  next.start = 0;
+  // Cost items dated in the past stay valid; their dates are absolute (month + year).
+  return next;
+}
+
+export interface GoalRow { key: string; label: string; done: number; target: number; href: string }
+
+/** This week's actuals against what the plan asks, as rows for the day and progress screens. */
+export function weekGoalRows(t: WeeklyTargets, w: { messages: number; meetings: number; content: number; leads: number }): GoalRow[] {
+  const want = (x: number) => (x > 0 ? Math.max(1, Math.round(x)) : 0);
+  const rows: GoalRow[] = [
+    { key: "outreach", label: "פניות לשותפים", done: w.messages, target: want(t.outreach), href: "/admin/partners" },
+    { key: "meetings", label: "פגישות עם שותפים", done: w.meetings, target: want(t.partnerMeetings), href: "/admin/partners" },
+    { key: "content", label: "תוכן שמתפרסם", done: w.content, target: want(t.content), href: "/admin/content" },
+    { key: "leads", label: "לידים חדשים", done: w.leads, target: want(t.leads), href: "/admin/leads" },
+  ];
+  return rows.filter((r) => r.target > 0);
+}

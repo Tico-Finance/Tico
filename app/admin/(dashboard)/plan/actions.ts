@@ -2,8 +2,12 @@
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { planEntries, planSettings } from "@/drizzle/schema";
+import { planEntries } from "@/drizzle/schema";
 import { currentUserId } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { closePlanYear, createPlanYear, listPlanYears, reopenPlanYear, savePlanYear } from "@/lib/plan-db";
+import { nextYearSettings } from "@/lib/business-plan/targets";
+import { defaultSettings } from "@/lib/business-plan/defaults";
 import {
   entryKeyOf,
   entrySchemas,
@@ -16,20 +20,44 @@ type Result = { ok: true } | { ok: false; error: string };
 const KINDS: EntryKind[] = ["day", "action", "expense"];
 const isKind = (k: string): k is EntryKind => (KINDS as string[]).includes(k);
 
-export async function savePlanSettingsAction(input: unknown): Promise<Result> {
+export async function savePlanSettingsAction(year: number, input: unknown): Promise<Result> {
   const userId = await currentUserId();
   if (!userId) return { ok: false, error: "לא מחובר" };
+  if (!Number.isInteger(year) || year < 2024 || year > 2100) return { ok: false, error: "שנה לא תקינה" };
 
   const parsed = planSettingsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "הנתונים אינם תקינים" };
 
-  await db
-    .insert(planSettings)
-    .values({ userId, data: parsed.data })
-    .onConflictDoUpdate({
-      target: planSettings.userId,
-      set: { data: parsed.data, updatedAt: new Date() },
-    });
+  const saved = await savePlanYear(userId, year, { ...parsed.data, start: 0 });
+  return saved ? { ok: true } : { ok: false, error: "השנה הזאת סגורה. אפשר לפתוח אותה מחדש לעריכה." };
+}
+
+/** Finalize a year: its settings freeze together with a summary of plan against actual. */
+export async function closePlanYearAction(year: number): Promise<Result> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "לא מחובר" };
+  const summary = await closePlanYear(userId, year);
+  if (!summary) return { ok: false, error: "אין תוכנית לשנה הזאת" };
+  revalidatePath("/admin/plan");
+  return { ok: true };
+}
+
+export async function reopenPlanYearAction(year: number): Promise<Result> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "לא מחובר" };
+  await reopenPlanYear(userId, year);
+  revalidatePath("/admin/plan");
+  return { ok: true };
+}
+
+/** Open `year` as a new plan that starts from the assumptions of the latest earlier year. */
+export async function createPlanYearAction(year: number): Promise<Result> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "לא מחובר" };
+  const rows = await listPlanYears(userId);
+  const prev = rows.find((r) => r.year < year && r.settings);
+  await createPlanYear(userId, year, nextYearSettings(prev?.settings ?? defaultSettings(new Date(year, 0, 1))));
+  revalidatePath("/admin/plan");
   return { ok: true };
 }
 
