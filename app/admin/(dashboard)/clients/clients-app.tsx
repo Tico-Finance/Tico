@@ -248,7 +248,7 @@ export default function ClientsApp({
     <div className="mx-auto max-w-4xl">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="ml-2 text-xl font-bold text-primary">לקוחות</h1>
-        <div className="flex max-w-full gap-1 overflow-x-auto">
+        <div className="flex max-w-full flex-wrap gap-1">
           {VIEWS.map((v) => (
             <button key={v.id} onClick={() => setView(v.id)} className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${view === v.id ? "bg-primary text-white" : "text-primary hover:bg-primary/5"}`}>
               {v.label}

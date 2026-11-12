@@ -202,7 +202,7 @@ export default function PartnersApp({
   }
 
   const kindTabs = () => (
-    <div className="inline-flex max-w-full overflow-x-auto rounded-lg border border-black/10 bg-surface text-sm">
+    <div className="inline-flex max-w-full flex-wrap overflow-hidden rounded-lg border border-black/10 bg-surface text-sm">
       {([...PARTNER_KINDS, "all"] as KindFilter[]).map((k) => (
         <button
           key={k}
@@ -304,15 +304,20 @@ export default function PartnersApp({
     return (
       <>
         <div className="mb-3">{kindTabs()}</div>
-        <div className="flex items-start gap-3 overflow-x-auto pb-3">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {BOARD_COLUMNS.map((c) => {
             const list = src.filter((p) => c.stages.includes(p.stage)).sort((a, b) => (a.nextAt ?? "9").localeCompare(b.nextAt ?? "9"));
             return (
-              <div key={c.title} className="w-64 shrink-0 rounded-xl border border-black/5 bg-black/[0.03] p-2 md:w-60">
-                <h3 className="mb-2 flex justify-between text-sm font-bold text-primary">{c.title}<span className="font-normal text-foreground/50">{list.length}</span></h3>
-                {list.map((p) => partnerCard(p))}
-                {list.length === 0 && <div className="text-xs text-foreground/50">ריק</div>}
-              </div>
+              <details key={c.title} open={list.length > 0 && !c.stages.includes("cold")} className={box}>
+                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-primary">
+                  <span>{c.title}</span>
+                  <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs font-medium text-foreground/70">{list.length}</span>
+                </summary>
+                <div className="mt-3">
+                  {list.map((p) => partnerCard(p))}
+                  {list.length === 0 && <div className="text-xs text-foreground/50">ריק</div>}
+                </div>
+              </details>
             );
           })}
         </div>
@@ -425,20 +430,18 @@ export default function PartnersApp({
     return (
       <>
         <p className="mb-3 text-sm text-foreground/70">מה עובד: כל שותף מקבל ווי פתיחה, וכל תשובה נרשמת כשאתה לוחץ &quot;ענה&quot;. אחרי כ-10 שליחות כבר רואים כיוון. המדגם קטן, אז זה כיוון ולא הוכחה.</p>
-        <div className="overflow-x-auto rounded-xl border border-black/5 bg-surface">
-          <table className="w-full min-w-[480px] text-sm">
-            <thead className="bg-black/[0.03] text-xs text-foreground/60">
-              <tr><th className="p-2 text-start">ווי</th><th className="p-2 text-start">הוקצה</th><th className="p-2 text-start">נשלח</th><th className="p-2 text-start">ענו</th><th className="p-2 text-start">אחוז מענה</th></tr>
-            </thead>
-            <tbody>
-              {stats.map(({ h, assigned, sent, replied }) => (
-                <tr key={h.id} className="border-t border-black/5">
-                  <td className="p-2 font-bold">{h.title}</td><td className="p-2">{assigned}</td><td className="p-2">{sent}</td><td className="p-2">{replied}</td>
-                  <td className="p-2">{sent ? `${Math.round((replied / sent) * 100)}%` : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid gap-2 md:grid-cols-2">
+          {stats.map(({ h, assigned, sent, replied }) => (
+            <div key={h.id} className={box}>
+              <div className="font-bold">{h.title}</div>
+              <div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs text-foreground/60">
+                <div><div className="text-lg font-bold text-foreground">{assigned}</div>הוקצה</div>
+                <div><div className="text-lg font-bold text-foreground">{sent}</div>נשלח</div>
+                <div><div className="text-lg font-bold text-foreground">{replied}</div>ענו</div>
+                <div><div className="text-lg font-bold text-foreground">{sent ? `${Math.round((replied / sent) * 100)}%` : "—"}</div>מענה</div>
+              </div>
+            </div>
+          ))}
         </div>
       </>
     );
@@ -474,7 +477,7 @@ export default function PartnersApp({
     <div className="mx-auto max-w-6xl">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="ml-2 text-xl font-bold text-primary">שותפים</h1>
-        <div className="flex max-w-full gap-1 overflow-x-auto">
+        <div className="flex max-w-full flex-wrap gap-1">
           {VIEWS.map((v) => (
             <button key={v.id} onClick={() => setView(v.id)} className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${view === v.id ? "bg-primary text-white" : "text-primary hover:bg-primary/5"}`}>{v.label}</button>
           ))}
