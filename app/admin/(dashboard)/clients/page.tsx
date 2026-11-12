@@ -8,7 +8,8 @@ import { toClientEventRow, toClientRow, type LeadOption } from "./types";
 
 export const metadata = { title: "לקוחות | Tico" };
 
-export default async function ClientsPage() {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
+  const { open } = await searchParams;
   const userId = await currentUserId();
   if (!userId) redirect("/admin/login");
 
@@ -30,5 +31,5 @@ export default async function ClientsPage() {
     .limit(200);
   const leadOptions: LeadOption[] = leadRows.filter((l) => !linked.has(l.id));
 
-  return <ClientsApp initialRows={rows.map(toClientRow)} initialEvents={events.map(toClientEventRow)} leadOptions={leadOptions} />;
+  return <ClientsApp initialOpenId={open ?? null} initialRows={rows.map(toClientRow)} initialEvents={events.map(toClientEventRow)} leadOptions={leadOptions} />;
 }

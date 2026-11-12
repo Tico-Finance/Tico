@@ -702,3 +702,32 @@ export const contentItems = pgTable(
     unique("content_items_user_draft_unique").on(t.userId, t.draftPostId),
   ]
 );
+
+// ── Manual tasks (the Eisenhower day) ──
+
+export const tasks = pgTable("tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  dueAt: date("due_at", { mode: "string" }),
+  important: boolean("important").notNull().default(false),
+  estMinutes: integer("est_minutes").notNull().default(15),
+  // revenue | growth | exposure | admin
+  goal: text("goal").notNull().default("admin"),
+  // 1..4: forces the quadrant regardless of date and importance.
+  quadrantOverride: integer("quadrant_override"),
+  // How many times the task was pushed to another day.
+  postponed: integer("postponed").notNull().default(0),
+  // open | done | dropped
+  status: text("status").notNull().default("open"),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  notes: text("notes").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

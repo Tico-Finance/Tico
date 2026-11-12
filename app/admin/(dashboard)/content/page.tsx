@@ -9,7 +9,8 @@ import { toContentRow } from "./types";
 
 export const metadata = { title: "מעקב תוכן | Tico" };
 
-export default async function ContentPage() {
+export default async function ContentPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
+  const { open } = await searchParams;
   const userId = await currentUserId();
   if (!userId) redirect("/admin/login");
 
@@ -20,5 +21,5 @@ export default async function ContentPage() {
     .orderBy(desc(contentItems.createdAt));
   const leadCounts = await leadCountsByCode(userId, rows.map((r) => r.code));
 
-  return <ContentApp initialRows={rows.map(toContentRow)} leadCounts={leadCounts} />;
+  return <ContentApp initialOpenId={open ?? null} initialRows={rows.map(toContentRow)} leadCounts={leadCounts} />;
 }

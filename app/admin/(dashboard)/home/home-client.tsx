@@ -11,8 +11,7 @@ import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast"
 import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
-import type { Agenda } from "@/lib/agenda";
-import AgendaSection from "./agenda-section";
+import DayMatrix, { type MatrixProps } from "./day-matrix";
 
 const noopSubscribe = () => () => {};
 const isOpen = (s: LeadRow["stage"]) => s !== "client" && s !== "lost";
@@ -25,7 +24,7 @@ export default function HomeClient(props: {
   settings: PlanSettings | null;
   days: Record<string, DayEntry>;
   calendar: CalendarResult;
-  agenda: Agenda;
+  matrix: MatrixProps;
 }) {
   // "Today" only exists on the client (the server may be in another timezone).
   const todayKey = useSyncExternalStore(noopSubscribe, () => dk(new Date()), () => null);
@@ -33,25 +32,21 @@ export default function HomeClient(props: {
   return <Home {...props} today={pdt(todayKey)} />;
 }
 
-function Home({ leads, settings, days, calendar, agenda, today }: {
+function Home({ leads, settings, days, calendar, matrix, today }: {
   leads: LeadRow[];
   settings: PlanSettings | null;
   days: Record<string, DayEntry>;
   calendar: CalendarResult;
-  agenda: Agenda;
+  matrix: MatrixProps;
   today: Date;
 }) {
   const dayStart = today.getTime();
   const dayEnd = dayStart + 864e5;
 
-  const { meetings, toHandle } = useMemo(() => {
+  const meetings = useMemo(() => {
     const open = leads.filter((l) => isOpen(l.stage) && l.nextAt);
     const t = (l: LeadRow) => new Date(l.nextAt as string).getTime();
-    const dueToday = open.filter((l) => t(l) < dayEnd).sort((a, b) => t(a) - t(b));
-    return {
-      meetings: dueToday.filter((l) => l.stage === "meeting" && t(l) >= dayStart),
-      toHandle: dueToday.filter((l) => !(l.stage === "meeting" && t(l) >= dayStart)),
-    };
+    return open.filter((l) => t(l) < dayEnd && l.stage === "meeting" && t(l) >= dayStart).sort((a, b) => t(a) - t(b));
   }, [leads, dayStart, dayEnd]);
 
   const todayKey = dk(today);
@@ -92,23 +87,7 @@ function Home({ leads, settings, days, calendar, agenda, today }: {
         )}
       </section>
 
-      <AgendaSection agenda={agenda} />
-
-      <section className={card}>
-        <Head title="לידים לטיפול היום" count={toHandle.length} href="/admin/leads" />
-        {toHandle.length === 0 ? (
-          <Empty text="הכול מטופל. אין לידים שמחכים להיום." />
-        ) : (
-          <ul className="divide-y divide-black/5">
-            {toHandle.slice(0, 6).map((l) => <LeadItem key={l.id} l={l} overdue={new Date(l.nextAt as string).getTime() < dayStart} />)}
-          </ul>
-        )}
-        {toHandle.length > 6 && (
-          <Link href="/admin/leads" className="mt-2 block text-center text-sm font-medium text-secondary">
-            עוד {toHandle.length - 6} לידים…
-          </Link>
-        )}
-      </section>
+      <DayMatrix {...matrix} />
 
       <Target settings={settings} days={days} today={today} />
     </div>

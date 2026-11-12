@@ -8,7 +8,8 @@ import { toEventRow, toPartnerRow } from "./types";
 
 export const metadata = { title: "שותפים | Tico" };
 
-export default async function PartnersPage() {
+export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
+  const { open } = await searchParams;
   const userId = await currentUserId();
   if (!userId) redirect("/admin/login");
 
@@ -20,5 +21,5 @@ export default async function PartnersPage() {
     .orderBy(desc(partnerEvents.at))
     .limit(3000);
 
-  return <PartnersApp initialRows={rows.map(toPartnerRow)} initialEvents={events.map(toEventRow)} />;
+  return <PartnersApp initialOpenId={open ?? null} initialRows={rows.map(toPartnerRow)} initialEvents={events.map(toEventRow)} />;
 }
