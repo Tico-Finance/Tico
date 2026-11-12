@@ -154,3 +154,54 @@ export function weekGoalRows(t: WeeklyTargets, w: { messages: number; meetings: 
   ];
   return rows.filter((r) => r.target > 0);
 }
+
+/** One thing the plan asks for this week, turned into today's share of work. */
+export interface Quota {
+  key: string;
+  title: string;
+  sub: string;
+  href: string;
+  goal: "revenue" | "growth" | "exposure" | "admin";
+  est: number;
+  money: number;
+  urgent: boolean;
+}
+
+// Per unit: minutes it takes, how close it is to money, and the sentence that tells him what to do.
+const QUOTA_META: Record<string, { goal: Quota["goal"]; minutes: number; money: number; verb: (n: number) => string }> = {
+  outreach: { goal: "growth", minutes: 4, money: 45, verb: (n) => `לשלוח ${n} פניות לשותפים` },
+  meetings: { goal: "growth", minutes: 45, money: 60, verb: (n) => `לקיים ${n === 1 ? "פגישה" : `${n} פגישות`} עם שותפים` },
+  content: { goal: "exposure", minutes: 40, money: 20, verb: (n) => `לפרסם ${n === 1 ? "תוכן אחד" : `${n} תכנים`}` },
+  leads: { goal: "revenue", minutes: 30, money: 65, verb: (n) => n === 1 ? "לייצר ליד חדש אחד" : `לייצר ${n} לידים חדשים` },
+};
+
+/**
+ * Today's share of the weekly goals. The week's remaining work is spread over the working days that
+ * are left (Sunday to Thursday), so a goal of 14 messages asks for about 3 a day, a goal of one meeting
+ * shows up only when the week is half gone, and whatever is left on the last day becomes urgent.
+ */
+export function dailyQuotas(rows: GoalRow[], date: string): Quota[] {
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  if (weekday > 4) return [];
+  const daysLeft = 5 - weekday;
+  const out: Quota[] = [];
+  for (const r of rows) {
+    const meta = QUOTA_META[r.key];
+    const remaining = r.target - r.done;
+    if (!meta || remaining <= 0) continue;
+    const afterToday = (r.target * (daysLeft - 1)) / 5;
+    const n = Math.round(remaining - afterToday);
+    if (n <= 0) continue;
+    out.push({
+      key: r.key,
+      title: meta.verb(n),
+      sub: `יעד השבוע מהתוכנית: ${r.target} · נעשה עד עכשיו ${r.done}`,
+      href: r.href,
+      goal: meta.goal,
+      est: Math.min(Math.max(10, n * meta.minutes), 120),
+      money: meta.money,
+      urgent: daysLeft === 1,
+    });
+  }
+  return out;
+}

@@ -5,10 +5,11 @@ import { SENT_EVENT_KINDS, addDays, hoursAgo, todayIL } from "@/lib/partners";
 import { getCalendarEvents } from "@/lib/calendar";
 import { buildPriorityTasks, dayToPlan, nextWorkday, nowIL, planDay, rankForFocus, summarizeGoals } from "@/lib/priorities";
 import { loadProgress } from "@/lib/progress-db";
+import { weekStartOf } from "@/lib/progress";
 import { dueOccurrences, LOOKBACK_DAYS } from "@/lib/routines";
 import { listRoutines, loadRoutineLogs } from "@/lib/routines-db";
 import { activePlan, listPlanYears } from "@/lib/plan-db";
-import { weekGoalRows, weeklyTargets } from "@/lib/business-plan/targets";
+import { dailyQuotas, weekGoalRows, weeklyTargets } from "@/lib/business-plan/targets";
 
 /** Everything the home screen needs to show the day by the Eisenhower matrix. */
 export async function buildDay(userId: string, at: Date = new Date()) {
@@ -46,6 +47,11 @@ export async function buildDay(userId: string, at: Date = new Date()) {
   const plan = activePlan(planRows, Number(now.date.slice(0, 4)));
   const thisWeek = weekly[weekly.length - 1];
   const weekGoals = plan?.settings ? weekGoalRows(weeklyTargets(plan.settings, plan.year, now.date), thisWeek) : [];
+  // The plan's weekly goals become today's work. When the plan is for the next working day in a new week, nothing is done yet.
+  const sameWeek = weekStartOf(dp.date) === weekStartOf(now.date);
+  const quotas = plan?.settings
+    ? dailyQuotas(sameWeek ? weekGoals : weekGoalRows(weeklyTargets(plan.settings, plan.year, dp.date), { messages: 0, meetings: 0, content: 0, leads: 0 }), dp.date)
+    : [];
   const priorityTasks = buildPriorityTasks(
     {
       partners: partnerRows,
@@ -53,6 +59,7 @@ export async function buildDay(userId: string, at: Date = new Date()) {
       content: contentRows.map((c) => ({ id: c.id, title: c.title, format: c.format, status: c.status, plannedAt: c.plannedAt, publishedAt: c.publishedAt, hasMetrics: Object.keys(c.metrics ?? {}).length > 0 })),
       leads: leadRows.map((l) => ({ id: l.id, name: l.name, stage: l.stage, nextAt: l.nextAt ? todayIL(l.nextAt) : null, nextStep: l.nextStep })),
       routines: routineDue,
+      quotas,
       manual: taskRows.map((t) => ({ id: t.id, title: t.title, dueAt: t.dueAt, important: t.important, estMinutes: t.estMinutes, goal: t.goal, quadrantOverride: t.quadrantOverride, status: t.status, postponed: t.postponed })),
     },
     dp.date

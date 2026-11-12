@@ -21,7 +21,7 @@ export const QUADRANTS: Record<Quadrant, { title: string; hint: string }> = {
   4: { title: "לא דחוף ולא חשוב", hint: "תדחה או תמחק" },
 };
 
-export type TaskSource = "partner" | "client" | "content" | "lead" | "manual" | "routine";
+export type TaskSource = "partner" | "client" | "content" | "lead" | "manual" | "routine" | "plan";
 
 export interface PriorityTask {
   key: string;
@@ -51,6 +51,8 @@ export interface PriorityInput {
   clients: { id: string; name: string; process: string; stageIndex: number; stageDueAt: string | null; status: string; pendingMessage: string | null }[];
   content: { id: string; title: string; format: string; status: string; plannedAt: string | null; publishedAt: string | null; hasMetrics: boolean }[];
   leads: { id: string; name: string; stage: string; nextAt: string | null; nextStep: string | null }[];
+  /** Today's share of the weekly goals from the yearly plan. */
+  quotas?: { key: string; title: string; sub: string; href: string; goal: string; est: number; money: number; urgent: boolean }[];
   routines?: { id: string; title: string; date: string; startMin: number | null; estMinutes: number; goal: string; flexible: boolean; late: boolean }[];
   manual: { id: string; title: string; dueAt: string | null; important: boolean; estMinutes: number; goal: string; quadrantOverride: number | null; status: string; postponed?: number }[];
 }
@@ -147,6 +149,15 @@ export function buildPriorityTasks(input: PriorityInput, today: string): Priorit
     });
   }
 
+  // The yearly plan, as today's share of the week's goals (messages, meetings, content, leads).
+  for (const q of input.quotas ?? []) {
+    const goal = (["revenue", "growth", "exposure", "admin"].includes(q.goal) ? q.goal : "admin") as Goal;
+    add({
+      key: `q:${q.key}:${today}`, source: "plan", id: q.key, title: q.title, sub: q.sub, href: q.href,
+      goal, est: q.est, money: q.money, urgent: q.urgent, important: true, due: today, late: false,
+    });
+  }
+
   // Weekly routines: on their day they are important; unless flexible they are also urgent.
   for (const r of input.routines ?? []) {
     const goal = (["revenue", "growth", "exposure", "admin"].includes(r.goal) ? r.goal : "admin") as Goal;
@@ -239,6 +250,7 @@ const GROUP_TITLE: Record<TaskSource, Record<1 | 2 | 3, string>> = {
   partner: { 1: "שותפים: פניות להיום", 2: "שותפים: פניות וביקורים", 3: "שותפים: משימות קטנות" },
   lead: { 1: "לידים לטיפול", 2: "לידים לטיפול", 3: "לידים: משימות קטנות" },
   content: { 1: "תוכן: להעלות היום", 2: "תוכן", 3: "תוכן: משימות קטנות" },
+  plan: { 1: "יעדי השבוע מהתוכנית", 2: "יעדי השבוע מהתוכנית", 3: "יעדי השבוע מהתוכנית" },
   routine: { 1: "הרגלים קבועים", 2: "הרגלים קבועים", 3: "הרגלים קבועים" },
   manual: { 1: "משימות דחופות", 2: "משימות חשובות", 3: "משימות קטנות" },
 };
@@ -308,13 +320,13 @@ export function planDay(tasks: PriorityTask[], cursor: number = WORK.start, busy
   };
 
   // 1. Urgent and important: first, always placed.
-  for (const src of ["client", "lead", "partner", "content", "routine", "manual"] as TaskSource[]) {
+  for (const src of ["client", "lead", "partner", "content", "routine", "plan", "manual"] as TaskSource[]) {
     place(GROUP_TITLE[src][1], bySource(1).get(src) ?? [], 1, true);
   }
   // 2. Important, not urgent: the deep work (content) first, then outreach, in the best hours.
   const q2 = bySource(2);
   for (const t of q2.get("content") ?? []) place(`${GROUP_TITLE.content[2]}: ${t.title}`, [t], 2, false);
-  for (const src of ["client", "lead", "partner", "routine", "manual"] as TaskSource[]) place(GROUP_TITLE[src][2], q2.get(src) ?? [], 2, false);
+  for (const src of ["client", "lead", "partner", "routine", "plan", "manual"] as TaskSource[]) place(GROUP_TITLE[src][2], q2.get(src) ?? [], 2, false);
   // 3. Urgent, not important: one batch at the end.
   const q3 = rest.filter((t) => t.quadrant === 3);
   place("משימות קטנות בקבוצה", q3, 3, false);
