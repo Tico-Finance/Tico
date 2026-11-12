@@ -11,6 +11,8 @@ import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast"
 import { dk, pdt, planStartFor } from "@/lib/business-plan/dates";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
+import type { Agenda } from "@/lib/agenda";
+import AgendaSection from "./agenda-section";
 
 const noopSubscribe = () => () => {};
 const isOpen = (s: LeadRow["stage"]) => s !== "client" && s !== "lost";
@@ -23,6 +25,7 @@ export default function HomeClient(props: {
   settings: PlanSettings | null;
   days: Record<string, DayEntry>;
   calendar: CalendarResult;
+  agenda: Agenda;
 }) {
   // "Today" only exists on the client (the server may be in another timezone).
   const todayKey = useSyncExternalStore(noopSubscribe, () => dk(new Date()), () => null);
@@ -30,11 +33,12 @@ export default function HomeClient(props: {
   return <Home {...props} today={pdt(todayKey)} />;
 }
 
-function Home({ leads, settings, days, calendar, today }: {
+function Home({ leads, settings, days, calendar, agenda, today }: {
   leads: LeadRow[];
   settings: PlanSettings | null;
   days: Record<string, DayEntry>;
   calendar: CalendarResult;
+  agenda: Agenda;
   today: Date;
 }) {
   const dayStart = today.getTime();
@@ -87,6 +91,8 @@ function Home({ leads, settings, days, calendar, today }: {
           <p className="mt-2 text-xs text-rose-600">לא הצלחתי לקרוא את היומן של גוגל כרגע.</p>
         )}
       </section>
+
+      <AgendaSection agenda={agenda} />
 
       <section className={card}>
         <Head title="לידים לטיפול היום" count={toHandle.length} href="/admin/leads" />
