@@ -61,7 +61,8 @@ export default function TabPlan({
   ];
   const hScale = Math.max(w.total, p.hours) * 1.08;
 
-  const monthLabels = Array.from({ length: 12 }, (_, m) => mname(m));
+  const N = p.months;
+  const monthLabels = Array.from({ length: N }, (_, m) => mname(m));
   const hrsPill = w.total <= p.hours ? <Pill tone="good">✓ בתוך הקיבולת</Pill> : <Pill tone="bad">✕ חריגה של <Num>{dec(w.total - p.hours)}</Num> שעות</Pill>;
 
   return (
@@ -96,7 +97,7 @@ export default function TabPlan({
         <h2 className="text-xl font-extrabold text-primary">מה צריך לקרות כדי שזה יקרה</h2>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
           {[
-            ["תיקים לסגור", dec(cur.cases), `בשנה, בערך ${dec(cur.cases / 12)} בחודש`],
+            ["תיקים לסגור", dec(cur.cases), `${N === 12 ? "בשנה" : "בתקופה"}, בערך ${dec(cur.cases / N)} בחודש`],
             ["לידים חדשים", dec(w.leads), "בשבוע"],
             ["פגישות", dec(w.meet), "בשבוע"],
             ["תוכן לפרסם", dec(posts + vids), "פוסטים וסרטונים בשבוע"],
@@ -126,8 +127,8 @@ export default function TabPlan({
         <Card>
           <Legend items={[{ t: "כסף שנכנס", color: "var(--pl-money)" }, { t: "הוצאות (כולל עובדים ומתפעלים שהוספת)", color: "currentColor", kind: "dash" }]} />
           <BarChart aria="כסף שנכנס בכל חודש מול הוצאות" labels={monthLabels} yFmt={kfmt} tipFmt={(v) => "₪" + nf(v)} tipTitle={(i) => monthLabels[i]}
-            line={{ name: "הוצאות", v: cur.costM.map((c) => c + cur.marketing / 12) }}
-            series={[{ name: "נכנס בחודש", color: "var(--pl-money)", v: cur.tot.income }]} />
+            line={{ name: "הוצאות", v: cur.costM.slice(0, N).map((c) => c + cur.marketing / N) }}
+            series={[{ name: "נכנס בחודש", color: "var(--pl-money)", v: cur.tot.income.slice(0, N) }]} />
           <p className="mt-2 text-foreground/70">
             {cur.dip < 0
               ? <>בחודשים הראשונים יהיה לחוץ: הנקודה הנמוכה ביותר היא מינוס <Num>{money(Math.abs(cur.dip))}</Num> ב{endName(cur.iMin)}. כדאי להיות מוכן לזה.</>
@@ -299,16 +300,16 @@ export default function TabPlan({
             <h3 className="mb-1.5 font-bold">הכנסה חודשית לפי סוג תיק</h3>
             <Legend items={cur.types.map((t) => ({ t: t.n, color: tcolor(t.ix) }))} />
             <BarChart aria="הכנסה חודשית לפי סוג תיק" labels={monthLabels} yFmt={kfmt} tipFmt={(v) => "₪" + nf(v)} tipTitle={(i) => monthLabels[i]}
-              series={cur.types.map((t) => ({ name: t.n, color: tcolor(t.ix), v: t.cashM }))} />
+              series={cur.types.map((t) => ({ name: t.n, color: tcolor(t.ix), v: t.cashM.slice(0, N) }))} />
           </Card>
           <Card>
             <h3 className="mb-1.5 font-bold">כמה נשאר בכיס לאורך הזמן, בכל תרחיש</h3>
             <Legend items={[{ t: "חצי מהיעד", color: "var(--pl-s50)", kind: "dash" }, { t: "היעד", color: "var(--pl-s100)", kind: "line" }, { t: "פי 1.5", color: "var(--pl-s150)", kind: "line" }]} />
-            <LineChart aria="תוצאה מצטברת לפי תרחיש" count={13} yFmt={kfmt} tipFmt={(v) => (v < 0 ? "−" : "") + "₪" + nf(Math.abs(v))}
-              ticks={Array.from({ length: 12 }, (_, i) => ({ i, label: mname(i) }))} tipTitle={(i) => (i === 0 ? "נקודת פתיחה" : endName(i))}
+            <LineChart aria="תוצאה מצטברת לפי תרחיש" count={N + 1} yFmt={kfmt} tipFmt={(v) => (v < 0 ? "−" : "") + "₪" + nf(Math.abs(v))}
+              ticks={Array.from({ length: N }, (_, i) => ({ i, label: mname(i) }))} tipTitle={(i) => (i === 0 ? "נקודת פתיחה" : endName(i))}
               series={plans.slice().reverse().map((s) => {
                 const sc = SCEN.find((x) => x.k === s.k)!;
-                return { name: sc.label, color: sc.color, v: s.cum, w: s.k === 1 ? 3 : 2, dash: s.k < 1 ? "6 4" : undefined, label: sc.label };
+                return { name: sc.label, color: sc.color, v: s.cum.slice(0, N + 1), w: s.k === 1 ? 3 : 2, dash: s.k < 1 ? "6 4" : undefined, label: sc.label };
               })} />
           </Card>
           <Card className="overflow-x-auto">
@@ -321,13 +322,13 @@ export default function TabPlan({
                   ["הגשות", (m: number) => dec(cur.tot.sub[m])],
                   ["חתימות", (m: number) => dec(cur.tot.signed[m])],
                   ["הכנסה", (m: number) => kfmt(cur.tot.income[m]), true],
-                  ["הוצאות", (m: number) => kfmt(cur.costM[m] + cur.marketing / 12)],
-                  ["נטו בחודש", (m: number) => kfmt(cur.tot.income[m] - cur.costM[m] - cur.marketing / 12)],
+                  ["הוצאות", (m: number) => kfmt(cur.costM[m] + cur.marketing / N)],
+                  ["נטו בחודש", (m: number) => kfmt(cur.tot.income[m] - cur.costM[m] - cur.marketing / N)],
                   ["נטו מצטבר", (m: number) => kfmt(cur.cum[m + 1])],
                 ] as [string, (m: number) => string, boolean?][]).map(([l, f, sep]) => (
                   <tr key={l} className={sep ? "sep" : undefined}>
                     <th scope="row">{l}</th>
-                    {Array.from({ length: 12 }, (_, m) => <td key={m} className="v"><Num>{f(m)}</Num></td>)}
+                    {Array.from({ length: N }, (_, m) => <td key={m} className="v"><Num>{f(m)}</Num></td>)}
                   </tr>
                 ))}
               </tbody>

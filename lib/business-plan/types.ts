@@ -76,6 +76,8 @@ export interface PlanSettings {
   open: number;
   /** Month (0-11) the 12-month plan starts at. */
   start: number;
+  /** Last month (0-11) of the plan; the plan runs from `start` to here within one calendar year. Defaults to December. */
+  end?: number;
   /** Leads that come from referrals, per signed case. */
   ref: number;
   hours: number;

@@ -11,12 +11,16 @@ export const MEETING_FROM_REPLY = 0.4;
 /** Units that count as published content. */
 const CONTENT_UNITS = ["פוסט", "סרטון"];
 
-/** The plan always covers one calendar year, so the start month is fixed to January. */
-export const yearSettings = (S: PlanSettings): PlanSettings => ({ ...S, start: 0 });
-export const planStartOfYear = (year: number) => new Date(year, 0, 1);
+/** A plan lives inside one calendar year: from `start` to `end` month (default the whole year). */
+export const yearSettings = (S: PlanSettings): PlanSettings => {
+  const start = Math.min(Math.max(Math.round(+S.start || 0), 0), 11);
+  return { ...S, start, end: Math.min(Math.max(Math.round(S.end ?? 11), start), 11) };
+};
+/** First day of the plan's first month. */
+export const planStartOf = (S: PlanSettings, year: number) => new Date(year, yearSettings(S).start, 1);
 
 export function yearPlan(S: PlanSettings, year: number, k = 1): Plan {
-  return buildPlan(buildParams(yearSettings(S), planStartOfYear(year)), k);
+  return buildPlan(buildParams(yearSettings(S), planStartOf(S, year)), k);
 }
 
 export interface ChannelTarget { name: string; unit: string; perWeek: number }
@@ -44,11 +48,14 @@ export interface WeeklyTargets {
 /** The weekly numbers the plan asks for in the month that contains `today` (YYYY-MM-DD). */
 export function weeklyTargets(S: PlanSettings, year: number, today: string): WeeklyTargets {
   const P = yearPlan(S, year);
+  const { start, end } = yearSettings(S);
   const y = Number(today.slice(0, 4));
-  const m = y === year ? Number(today.slice(5, 7)) - 1 : y < year ? 0 : 11;
-  const weeksInMonth = dim(year, m) / 7;
+  const cal = y === year ? Number(today.slice(5, 7)) - 1 : y < year ? start : 11;
+  // The month of the plan that today falls in (before it starts: the first; after it ends: the last).
+  const m = Math.min(Math.max(cal, start), end as number) - start;
+  const weeksInMonth = dim(year, m + start) / 7;
   const wk = (a: number[]) => a[m] / weeksInMonth;
-  const channels: ChannelTarget[] = P.chans.map((c) => ({ name: c.n, unit: c.unit, perWeek: c.units / 52 }));
+  const channels: ChannelTarget[] = P.chans.map((c) => ({ name: c.n, unit: c.unit, perWeek: c.units / P.weeks }));
   const partnerMeetings = channels.filter((c) => c.name.includes("שותפו")).reduce((a, c) => a + c.perWeek, 0);
   const content = channels.filter((c) => CONTENT_UNITS.includes(c.unit)).reduce((a, c) => a + c.perWeek, 0);
   return {
@@ -70,15 +77,19 @@ export function weeklyTargets(S: PlanSettings, year: number, today: string): Wee
 /** "What it takes" for the year, in plain numbers, for the top of the plan screen. */
 export function yearNeeds(S: PlanSettings, year: number) {
   const P = yearPlan(S, year);
-  const w = weeklyTargets(S, year, `${year}-06-15`);
+  const w = weeklyTargets(S, year, `${year}-${String(yearSettings(S).start + 1).padStart(2, "0")}-15`);
+  const { start, end } = yearSettings(S);
   return {
+    weeks: P.weeks,
+    from: start,
+    to: end as number,
     target: S.target,
     cases: P.cases,
     avgFee: P.avgFee,
     leads: P.leads,
     meetings: P.meet,
-    content: w.content * 52,
-    outreach: w.outreach * 52,
+    content: w.content * P.weeks,
+    outreach: w.outreach * P.weeks,
     hoursPerWeek: P.wk.total,
     availableHours: S.hours,
     net: P.net,
@@ -100,7 +111,8 @@ export interface YearSummary {
 
 export function summarizeYear(S: PlanSettings, year: number, days: Record<string, DayEntry>, expensesActual: number | null): YearSummary {
   const P = yearPlan(S, year);
-  const months = Array.from({ length: 12 }, (_, m) => ({ plan: Math.round(P.tot.income[m]), actual: 0 }));
+  const from = yearSettings(S).start;
+  const months = Array.from({ length: 12 }, (_, m) => ({ plan: Math.round(P.tot.income[m - from] ?? 0), actual: 0 }));
   let leads = 0, meetings = 0, signed = 0;
   for (const d of Object.values(days)) {
     if (!d.date.startsWith(`${year}-`)) continue;
@@ -124,6 +136,7 @@ export function nextYearSettings(prev: PlanSettings): PlanSettings {
   const next = structuredClone(prev);
   next.done = false;
   next.start = 0;
+  next.end = 11;
   // Cost items dated in the past stay valid; their dates are absolute (month + year).
   return next;
 }

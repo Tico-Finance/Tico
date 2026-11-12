@@ -154,6 +154,15 @@ function StepGoal({ S, upd, planYear }: { S: PlanSettings; upd: Upd; planYear: n
         </div>
       </div>
 
+      <Q label="איזו תקופה התוכנית מכסה?" hint={`בתוך ${planYear}. אפשר להתחיל באמצע השנה ולסיים בדצמבר, או לתכנן שנה שלמה`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={S.start} label="מחודש" className="self-start" options={MONTHS.map((m, v) => ({ v, label: m }))}
+            onChange={(v) => upd((d) => { d.start = v; if ((d.end ?? 11) < v) d.end = v; })} />
+          <span className="text-foreground/60">עד</span>
+          <Select value={S.end ?? 11} label="עד חודש" className="self-start" options={MONTHS.map((m, v) => ({ v, label: m })).filter((o) => o.v >= S.start)}
+            onChange={(v) => upd((d) => { d.end = v; })} />
+        </div>
+      </Q>
       <Q label="כמה תיקים כבר פתוחים אצלך עכשיו?" hint="תיקים שעוד לא נחתמו">
         <NumInput value={S.open} unit="תיקים" label="תיקים פתוחים" className="self-start" onChange={(n) => upd((d) => { d.open = n; })} />
       </Q>

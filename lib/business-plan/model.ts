@@ -44,6 +44,8 @@ export interface CaseItem {
 }
 export interface Params {
   start: number;
+  /** How many months the plan covers, from `start` (1-12). */
+  months: number;
   target: number;
   open: number;
   ref: number;
@@ -104,11 +106,14 @@ export function buildParams(S: PlanSettings, ps: Date): Params {
       }
     }
   }
+  const start = Math.min(Math.max(Math.round(+S.start || 0), 0), 11);
+  const months = Math.min(Math.max(Math.round((S.end ?? 11) - start + 1), 1), 12);
+  for (let m = months; m < 12; m++) { costM[m] = 0; fixedBreak[m] = []; }
   return {
-    costM, fixedBreak, caseItems,
+    costM, fixedBreak, caseItems, months,
     target: +S.target || 0,
     open: +S.open || 0,
-    start: +S.start || 0,
+    start,
     ref: +S.ref || 0,
     hours: Math.max((+S.hours || 1) + hAdd, 1),
     meetH: +S.meetH || 0,
@@ -184,12 +189,15 @@ export interface Plan {
   cum: number[];
   iMin: number;
   dip: number;
+  weeks: number;
   wk: { leads: number; meet: number; sub: number; cases: number; content: number; case: number; meetings: number; other: number; total: number };
 }
 
 /** The full 12-month plan for a scenario multiplier `k` (0.5 = half of target, 1 = target...). */
 export function buildPlan(p: Params, k: number): Plan {
-  const w = Array.from({ length: 12 }, (_, m) => SEAS[(p.start + m) % 12]);
+  const N = p.months;
+  const weeks = (N * 52) / 12;
+  const w = Array.from({ length: 12 }, (_, m) => (m < N ? SEAS[(p.start + m) % 12] : 0));
   const sumShare = p.types.reduce((a, t) => a + t.share, 0) || 1;
   const Z = () => Array<number>(12).fill(0);
 
@@ -210,11 +218,11 @@ export function buildPlan(p: Params, k: number): Plan {
   for (const t of types) {
     const open = p.open * t.s;
     const remain = open * t.fee * (1 - t.upfront);
-    const span = Math.max(1, Math.min(12, ...t.pay.map((x) => x.off)));
+    const span = Math.max(1, Math.min(N, ...t.pay.map((x) => x.off)));
     openCashM.set(t.id, Z().map((_, m) => (m < span ? remain / span : 0)));
     openCash += remain;
     let u = 0;
-    w.forEach((x, j) => t.pay.forEach((q) => { if (j + q.off <= 11) u += x * q.pct; }));
+    w.forEach((x, j) => t.pay.forEach((q) => { if (j + q.off <= N - 1) u += x * q.pct; }));
     C += t.s * t.fee * u;
   }
   const f = Math.max((p.target - openCash) / (C || 1), 0);
@@ -223,10 +231,10 @@ export function buildPlan(p: Params, k: number): Plan {
   for (const t of types) {
     const open = p.open * t.s;
     t.leadsM = w.map((x) => (f * k * t.s * x) / t.conv);
-    t.signedM = w.map((_, m) => (m < t.lag ? (open / t.lag) * k : t.leadsM[m - t.lag] * t.conv));
+    t.signedM = w.map((_, m) => (m >= N ? 0 : m < t.lag ? (open / t.lag) * k : t.leadsM[m - t.lag] * t.conv));
     t.cashM = (openCashM.get(t.id) ?? Z()).map((x) => x * k);
     t.leadsM.forEach((l, j) =>
-      t.pay.forEach((q) => { if (j + q.off <= 11) t.cashM[j + q.off] += l * t.conv * t.fee * q.pct; })
+      t.pay.forEach((q) => { if (j + q.off <= N - 1) t.cashM[j + q.off] += l * t.conv * t.fee * q.pct; })
     );
     t.cases = sum(t.signedM);
     t.leads = sum(t.leadsM);
@@ -282,25 +290,25 @@ export function buildPlan(p: Params, k: number): Plan {
     return x * (t.h * (1 - F) + Math.min(t.h, remM(m)) * F);
   }))));
   const meetH = meet * p.meetH;
-  const otherH = p.otherH * 52;
+  const otherH = p.otherH * weeks;
   const hoursYear = contentH + caseH + meetH + otherH;
 
   const costM = p.costM.map((c, m) => c + caseCostM[m]);
   const costs = sum(costM) + marketing;
-  const netM = tot.income.map((x, m) => x - costM[m] - marketing / 12);
+  const netM = tot.income.map((x, m) => x - costM[m] - (m < N ? marketing / N : 0));
   const cum = [0];
   netM.forEach((x) => cum.push(cum[cum.length - 1] + x));
   let iMin = 0;
   cum.forEach((v, i) => { if (v < cum[iMin]) iMin = i; });
 
   return {
-    k, types, tot, avgFee, upfrontShare, cases, leads, meet, sub, income, refLeads, chans, marketing,
+    k, weeks, types, tot, avgFee, upfrontShare, cases, leads, meet, sub, income, refLeads, chans, marketing,
     costs, costM,
     costBreak: p.fixedBreak.map((a, m) => a.concat(caseBreak[m].filter((x) => x[1] > 0))),
     net: income - costs, cum, iMin, dip: cum[iMin],
     wk: {
-      leads: leads / 52, meet: meet / 52, sub: sub / 52, cases: cases / 52,
-      content: contentH / 52, case: caseH / 52, meetings: meetH / 52, other: p.otherH, total: hoursYear / 52,
+      leads: leads / weeks, meet: meet / weeks, sub: sub / weeks, cases: cases / weeks,
+      content: contentH / weeks, case: caseH / weeks, meetings: meetH / weeks, other: p.otherH, total: hoursYear / weeks,
     },
   };
 }

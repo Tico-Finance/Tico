@@ -14,10 +14,10 @@ export default function TabExpenses({
   save: (e: ExpenseEntry) => void; remove: (key: string) => void;
 }) {
   const mc = monthIndex(today, ps);
-  const rows = Array.from({ length: 12 }, (_, m) => {
+  const rows = Array.from({ length: Math.round((plan1.weeks * 12) / 52) }, (_, m) => {
     const d = new Date(ps.getFullYear(), ps.getMonth() + m, 1);
     const k = monthKey(d);
-    return { m, d, k, plan: plan1.costM[m] + plan1.marketing / 12, a: expenses[k], br: (plan1.costBreak[m] ?? []).filter((x) => x[1] > 0) };
+    return { m, d, k, plan: plan1.costM[m] + plan1.marketing / Math.round((plan1.weeks * 12) / 52), a: expenses[k], br: (plan1.costBreak[m] ?? []).filter((x) => x[1] > 0) };
   });
   const cur = mc >= 0 && mc < 12 ? rows[mc] : null;
   const [draft, setDraft] = useState<{ key: string; amount: string; note: string } | null>(null);

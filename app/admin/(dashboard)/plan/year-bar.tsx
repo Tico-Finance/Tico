@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanSettings } from "@/lib/business-plan/types";
 import { yearNeeds, type YearSummary } from "@/lib/business-plan/targets";
-import { money, nf } from "@/lib/business-plan/format";
+import { MONTHS, money, nf } from "@/lib/business-plan/format";
 import { closePlanYearAction, createPlanYearAction, reopenPlanYearAction } from "./actions";
 import { cx } from "./ui";
 
@@ -87,13 +87,13 @@ export function NeedsCard({ S, year }: { S: PlanSettings; year: number }) {
     ["תיקים חתומים", nf(n.cases)],
     ["פגישות לקוחות", nf(n.meetings)],
     ["לידים", nf(n.leads)],
-    ["תכנים שמתפרסמים", `${nf(n.content / 52)} בשבוע`],
-    ["פניות לשותפים", `${nf(n.outreach / 52)} בשבוע`],
+    ["תכנים שמתפרסמים", `${nf(n.content / n.weeks)} בשבוע`],
+    ["פניות לשותפים", `${nf(n.outreach / n.weeks)} בשבוע`],
     ["שעות עבודה", `${nf(n.hoursPerWeek)} בשבוע`],
   ];
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-black/5">
-      <h2 className="font-semibold text-primary">כדי להרוויח {money(n.target)} ב-{year} צריך</h2>
+      <h2 className="font-semibold text-primary">כדי להרוויח {money(n.target)} {n.from === 0 && n.to === 11 ? `ב-${year}` : `מ${MONTHS[n.from]} עד ${MONTHS[n.to]} ${year}`} צריך</h2>
       <ul className="mt-2 grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
         {items.map(([l, v]) => (
           <li key={l} className="rounded-xl bg-primary/5 p-2">
@@ -102,6 +102,7 @@ export function NeedsCard({ S, year }: { S: PlanSettings; year: number }) {
           </li>
         ))}
       </ul>
+      {n.to - n.from < 3 && <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">תקופה קצרה: כסף מלידים חדשים מגיע אחרי כמה חודשים, ולכן רוב ההכנסה כאן תלויה בתיקים שכבר פתוחים אצלך. כדאי לעדכן את מספר התיקים הפתוחים בהגדרות.</p>}
       <p className="mt-2 text-xs text-foreground/60">המספרים האלה הם מה שמסך היום והשבוע שלי מודד אותך מולו.</p>
     </section>
   );

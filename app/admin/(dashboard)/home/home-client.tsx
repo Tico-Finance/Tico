@@ -9,7 +9,7 @@ import { defaultSettings } from "@/lib/business-plan/defaults";
 import { buildParams, buildPlan } from "@/lib/business-plan/model";
 import { buildVerdict, statusOf, watchRows } from "@/lib/business-plan/forecast";
 import { dk, pdt } from "@/lib/business-plan/dates";
-import { planStartOfYear, yearSettings } from "@/lib/business-plan/targets";
+import { planStartOf, yearSettings } from "@/lib/business-plan/targets";
 import WeekGoals from "../week-goals";
 import { dec, money, nf } from "@/lib/business-plan/format";
 import type { LeadRow } from "../leads/leads-board";
@@ -168,8 +168,8 @@ function LeadItem({ l, showTime, overdue }: { l: LeadRow; showTime?: boolean; ov
 
 function Target({ settings, days, today, year }: { settings: PlanSettings | null; days: Record<string, DayEntry>; today: Date; year: number }) {
   const model = useMemo(() => {
-    const S = yearSettings(settings ?? defaultSettings(planStartOfYear(year)));
-    const ps = planStartOfYear(year);
+    const S = yearSettings(settings ?? defaultSettings(new Date(year, 0, 1)));
+    const ps = planStartOf(S, year);
     const plans = [0.5, 1, 1.5].map((k) => buildPlan(buildParams(S, ps), k));
     return { ps, plans };
   }, [settings, year]);

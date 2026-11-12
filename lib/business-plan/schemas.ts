@@ -33,7 +33,7 @@ const costItem = z.object({
 
 export const planSettingsSchema = z.object({
   done: z.boolean(),
-  target: num, fixed: num, open: num, start: num, ref: num,
+  target: num, fixed: num, open: num, start: num, end: num.optional(), ref: num,
   hours: num, meetH: num, otherH: num,
   g: z.object({ c1: num, c2: num, c3: num }),
   types: z.array(caseType).min(1).max(30),
