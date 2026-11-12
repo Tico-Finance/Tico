@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clientEvents, clients, leads } from "@/drizzle/schema";
 import {
@@ -21,13 +21,28 @@ export type ClientEventRecord = typeof clientEvents.$inferSelect;
 
 const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
 
-async function logEvent(userId: string, clientId: string, kind: string, text: string, stageKey?: string | null) {
+async function logEvent(
+  userId: string,
+  clientId: string,
+  kind: string,
+  text: string,
+  stageKey?: string | null,
+  prev?: Record<string, unknown> | null
+) {
   const [ev] = await db
     .insert(clientEvents)
-    .values({ clientId, userId, kind, text, stageKey: stageKey ?? null })
+    .values({ clientId, userId, kind, text, stageKey: stageKey ?? null, prev: prev ?? null })
     .returning();
   return ev;
 }
+
+const snapshot = (c: ClientRecord) => ({
+  stageIndex: c.stageIndex,
+  stageStartedAt: c.stageStartedAt,
+  stageDueAt: c.stageDueAt,
+  status: c.status,
+  pendingMessage: c.pendingMessage,
+});
 
 async function owned(userId: string, id: string): Promise<ClientRecord | null> {
   const [c] = await db.select().from(clients).where(and(eq(clients.id, id), eq(clients.userId, userId))).limit(1);
@@ -87,7 +102,7 @@ export async function advanceClient(userId: string, id: string, today: string = 
     )
     .where(eq(clients.id, id))
     .returning();
-  const event = await logEvent(userId, id, "stage_done", r.eventText, stageOf(c.process, c.stageIndex)?.key);
+  const event = await logEvent(userId, id, "stage_done", r.eventText, stageOf(c.process, c.stageIndex)?.key, snapshot(c));
   return { client, event };
 }
 
@@ -101,7 +116,7 @@ export async function markMilestone(userId: string, id: string, key: string) {
     .set({ pendingMessage: m.message.key, updatedAt: new Date() })
     .where(eq(clients.id, id))
     .returning();
-  const event = await logEvent(userId, id, "milestone", `אבן דרך: ${m.label}`, stageOf(c.process, c.stageIndex)?.key);
+  const event = await logEvent(userId, id, "milestone", `אבן דרך: ${m.label}`, stageOf(c.process, c.stageIndex)?.key, snapshot(c));
   return { client, event };
 }
 
@@ -116,7 +131,7 @@ export async function markUpdateSent(userId: string, id: string, messageKey?: st
     .set({ pendingMessage: null, updatedAt: new Date() })
     .where(eq(clients.id, id))
     .returning();
-  const event = await logEvent(userId, id, "update_sent", `נשלח עדכון: ${title}`, stageOf(c.process, c.stageIndex)?.key);
+  const event = await logEvent(userId, id, "update_sent", `נשלח עדכון: ${title}`, stageOf(c.process, c.stageIndex)?.key, snapshot(c));
   return { client, event };
 }
 
@@ -177,4 +192,37 @@ export async function addClientNote(userId: string, id: string, text: string) {
   const c = await owned(userId, id);
   if (!c) return null;
   return logEvent(userId, id, "note", text.trim().slice(0, 2000), stageOf(c.process, c.stageIndex)?.key);
+}
+
+/** Undo the latest stage action (stage done, milestone, update sent): restores the state it replaced. */
+export async function undoClientAction(userId: string, id: string) {
+  const [last] = await db
+    .select()
+    .from(clientEvents)
+    .where(and(eq(clientEvents.clientId, id), eq(clientEvents.userId, userId), isNotNull(clientEvents.prev)))
+    .orderBy(desc(clientEvents.at))
+    .limit(1);
+  if (!last?.prev) return null;
+  const prev = last.prev as {
+    stageIndex: number;
+    stageStartedAt: string | null;
+    stageDueAt: string | null;
+    status: string;
+    pendingMessage: string | null;
+  };
+  const [client] = await db
+    .update(clients)
+    .set({
+      stageIndex: prev.stageIndex,
+      stageStartedAt: prev.stageStartedAt,
+      stageDueAt: prev.stageDueAt,
+      status: prev.status,
+      pendingMessage: prev.pendingMessage,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(clients.id, id), eq(clients.userId, userId)))
+    .returning();
+  if (!client) return null;
+  await db.delete(clientEvents).where(eq(clientEvents.id, last.id));
+  return { client, removedEventId: last.id };
 }

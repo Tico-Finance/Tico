@@ -34,6 +34,8 @@ export interface PartnerEventRow {
   kind: string;
   text: string;
   hook: string | null;
+  /** True when the action behind this event can be undone. */
+  undoable: boolean;
   at: string;
 }
 
@@ -67,5 +69,5 @@ export function toPartnerRow(r: typeof partners.$inferSelect): PartnerRow {
 }
 
 export function toEventRow(e: typeof partnerEvents.$inferSelect): PartnerEventRow {
-  return { id: e.id, partnerId: e.partnerId, kind: e.kind, text: e.text, hook: e.hook, at: e.at.toISOString() };
+  return { id: e.id, partnerId: e.partnerId, kind: e.kind, text: e.text, hook: e.hook, undoable: e.prev != null, at: e.at.toISOString() };
 }

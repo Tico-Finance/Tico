@@ -8,6 +8,7 @@ import {
   createClient,
   markMilestone,
   markUpdateSent,
+  undoClientAction,
   updateClient,
 } from "@/lib/clients-db";
 import { toClientEventRow, toClientRow, type ClientEventRow, type ClientRow } from "./types";
@@ -67,4 +68,13 @@ export async function addClientNoteAction(id: string, text: string): Promise<Res
   const ev = await addClientNote(userId, id, text);
   if (!ev) return NOT_FOUND;
   return { ok: true, event: toClientEventRow(ev) };
+}
+
+/** Undo the latest stage action (stage done, milestone, update sent) on a client. */
+export async function undoClientActionAction(id: string): Promise<Result<{ client: ClientRow; removedEventId: string }>> {
+  const userId = await currentUserId();
+  if (!userId) return NOT_LOGGED_IN;
+  const r = await undoClientAction(userId, id);
+  if (!r) return { ok: false, error: "אין פעולה לבטל" };
+  return { ok: true, client: toClientRow(r.client), removedEventId: r.removedEventId };
 }

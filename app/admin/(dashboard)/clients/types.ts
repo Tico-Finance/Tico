@@ -21,6 +21,8 @@ export interface ClientEventRow {
   kind: string;
   text: string;
   stageKey: string | null;
+  /** True when the action behind this event can be undone. */
+  undoable: boolean;
   at: string;
 }
 
@@ -47,5 +49,5 @@ export function toClientRow(r: typeof clients.$inferSelect): ClientRow {
 }
 
 export function toClientEventRow(e: typeof clientEvents.$inferSelect): ClientEventRow {
-  return { id: e.id, clientId: e.clientId, kind: e.kind, text: e.text, stageKey: e.stageKey, at: e.at.toISOString() };
+  return { id: e.id, clientId: e.clientId, kind: e.kind, text: e.text, stageKey: e.stageKey, undoable: e.prev != null, at: e.at.toISOString() };
 }

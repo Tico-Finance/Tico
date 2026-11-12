@@ -608,6 +608,8 @@ export const partnerEvents = pgTable("partner_events", {
   text: text("text").notNull().default(""),
   // The hook the partner had when this happened, so reply rates can be measured per hook.
   hook: text("hook"),
+  // Snapshot of the partner before this action, so the action can be undone.
+  prev: jsonb("prev").$type<Record<string, unknown> | null>(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -652,5 +654,7 @@ export const clientEvents = pgTable("client_events", {
   kind: text("kind").notNull(),
   text: text("text").notNull().default(""),
   stageKey: text("stage_key"),
+  // Snapshot of the client before this action, so the action can be undone.
+  prev: jsonb("prev").$type<Record<string, unknown> | null>(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });

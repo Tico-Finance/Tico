@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { partnerEvents, partners } from "@/drizzle/schema";
 import { partnerExternalKey, planAction, todayIL, type PartnerAction, type PartnerImportItem } from "@/lib/partners";
@@ -40,9 +40,58 @@ export async function applyPartnerAction(
     .returning();
   const [event] = await db
     .insert(partnerEvents)
-    .values({ partnerId: id, userId, kind: o.eventKind, text: o.eventText, hook: current.hook })
+    .values({
+      partnerId: id,
+      userId,
+      kind: o.eventKind,
+      text: o.eventText,
+      hook: current.hook,
+      prev: {
+        stage: current.stage,
+        nextAt: current.nextAt,
+        nextAction: current.nextAction,
+        followDate: current.followDate,
+        coupon: current.coupon,
+      },
+    })
     .returning();
   return { partner, event };
+}
+
+/** Undo the latest cadence action: restores the state it replaced and removes its history row. */
+export async function undoPartnerAction(
+  userId: string,
+  id: string
+): Promise<{ partner: PartnerRecord; removedEventId: string } | null> {
+  const [last] = await db
+    .select()
+    .from(partnerEvents)
+    .where(and(eq(partnerEvents.partnerId, id), eq(partnerEvents.userId, userId), isNotNull(partnerEvents.prev)))
+    .orderBy(desc(partnerEvents.at))
+    .limit(1);
+  if (!last?.prev) return null;
+  const prev = last.prev as {
+    stage: string;
+    nextAt: string | null;
+    nextAction: string | null;
+    followDate: string | null;
+    coupon: boolean;
+  };
+  const [partner] = await db
+    .update(partners)
+    .set({
+      stage: prev.stage,
+      nextAt: prev.nextAt,
+      nextAction: prev.nextAction,
+      followDate: prev.followDate,
+      coupon: prev.coupon,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(partners.id, id), eq(partners.userId, userId)))
+    .returning();
+  if (!partner) return null;
+  await db.delete(partnerEvents).where(eq(partnerEvents.id, last.id));
+  return { partner, removedEventId: last.id };
 }
 
 /** Import partners. Safe to run again: a partner whose key already exists is skipped. */
