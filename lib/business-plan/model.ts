@@ -125,7 +125,8 @@ export function buildParams(S: PlanSettings, ps: Date): Params {
       n: t.n || "סוג תיק",
       fee: Math.max(+t.fee || 1, 1),
       share: anyT ? +t.share || 0 : 1,
-      c1: clampPct(t.c1), c2: clampPct(t.c2), c3: clampPct(t.c3),
+      // Submitting to a bank is not a funnel stage: a signed client is always submitted, so only two conversions count.
+      c1: clampPct(t.c1), c2: clampPct(t.c2), c3: 1,
       lag: +t.lag || 1,
       h: +t.h || 0,
       pa: +t.pa || 0, pp: +t.pp || 0, pe: +t.pe || 0,

@@ -15,8 +15,7 @@ const EMPTY: Fields = { leads: 0, meetings: 0, submissions: 0, signed: 0, cash: 
 const COUNTERS: { f: keyof Fields; label: string }[] = [
   { f: "leads", label: "לידים חדשים" },
   { f: "meetings", label: "פגישות שקיימתי" },
-  { f: "signed", label: "הסכמי התקשרות שנחתמו" },
-  { f: "submissions", label: "תיקים שהוגשו לבנקים" },
+  { f: "signed", label: "לקוחות חדשים (הסכם חתום)" },
 ];
 
 export default function TabReport({
@@ -65,14 +64,14 @@ export default function TabReport({
           {keys.length === 0 ? <p className="text-sm text-foreground/50">עוד אין דיווחים.</p> : (
             <div className="overflow-x-auto">
               <table className="pl-table">
-                <thead><tr><th>יום</th><th>לידים</th><th>פגישות</th><th>חתימות על הסכם</th><th>הגשות</th><th>כסף</th><th /></tr></thead>
+                <thead><tr><th>יום</th><th>לידים</th><th>פגישות</th><th>לקוחות חדשים</th><th>כסף</th><th /></tr></thead>
                 <tbody>
                   {keys.map((k) => {
                     const d = days[k];
                     return (
                       <tr key={k}>
                         <th scope="row">{hdate(k)}{d.demo && <> <span className="text-xs font-normal text-foreground/50">(דוגמה)</span></>}</th>
-                        <td className="v">{d.leads}</td><td className="v">{d.meetings}</td><td className="v">{d.signed}</td><td className="v">{d.submissions}</td>
+                        <td className="v">{d.leads}</td><td className="v">{d.meetings}</td><td className="v">{d.signed}</td>
                         <td className="v"><Num>{money(d.cash)}</Num></td>
                         <td className="whitespace-nowrap">
                           <button type="button" className="pl-link" onClick={() => { setDate(k); window.scrollTo({ top: 0, behavior: "smooth" }); }}>ערוך</button>

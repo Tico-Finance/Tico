@@ -33,8 +33,7 @@ export interface WeeklyTargets {
   /** Per week, for the current month of the plan. */
   leads: number;
   meetings: number;
-  /** Signed engagement agreements per week. */
-  agreements: number;
+  /** New clients (signed agreements) per week; the file goes to the bank right after. */
   cases: number;
   /** Content pieces (posts + videos) per week. */
   content: number;
@@ -65,7 +64,6 @@ export function weeklyTargets(S: PlanSettings, year: number, today: string): Wee
     monthIncome: P.tot.income[m],
     leads: wk(P.tot.leads),
     meetings: wk(P.tot.meet),
-    agreements: wk(P.tot.sub),
     cases: wk(P.tot.signed),
     content,
     partnerMeetings,
@@ -86,7 +84,6 @@ export function yearNeeds(S: PlanSettings, year: number) {
     to: end as number,
     target: S.target,
     cases: P.cases,
-    agreements: P.sub,
     avgFee: P.avgFee,
     leads: P.leads,
     meetings: P.meet,
@@ -106,10 +103,8 @@ export interface YearSummary {
   months: { plan: number; actual: number }[];
   leads: { plan: number; actual: number };
   meetings: { plan: number; actual: number };
-  /** Signed engagement agreements. */
+  /** New clients (signed agreements). */
   signed: { plan: number; actual: number };
-  /** Files submitted to banks. */
-  submitted: { plan: number; actual: number };
   costs: number;
   note?: string;
 }
@@ -118,11 +113,11 @@ export function summarizeYear(S: PlanSettings, year: number, days: Record<string
   const P = yearPlan(S, year);
   const from = yearSettings(S).start;
   const months = Array.from({ length: 12 }, (_, m) => ({ plan: Math.round(P.tot.income[m - from] ?? 0), actual: 0 }));
-  let leads = 0, meetings = 0, signed = 0, submitted = 0;
+  let leads = 0, meetings = 0, signed = 0;
   for (const d of Object.values(days)) {
     if (!d.date.startsWith(`${year}-`)) continue;
     months[Number(d.date.slice(5, 7)) - 1].actual += d.cash;
-    leads += d.leads; meetings += d.meetings; signed += d.signed; submitted += d.submissions;
+    leads += d.leads; meetings += d.meetings; signed += d.signed;
   }
   return {
     year,
@@ -131,8 +126,7 @@ export function summarizeYear(S: PlanSettings, year: number, days: Record<string
     months,
     leads: { plan: Math.round(P.leads), actual: leads },
     meetings: { plan: Math.round(P.meet), actual: meetings },
-    signed: { plan: Math.round(P.sub), actual: signed },
-    submitted: { plan: Math.round(P.cases), actual: submitted },
+    signed: { plan: Math.round(P.cases), actual: signed },
     costs: Math.round(expensesActual ?? P.costs),
   };
 }
