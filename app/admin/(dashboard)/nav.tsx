@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 const MAIN = [
   { href: "/admin/home", label: "בית", icon: "🏠" },
   { href: "/admin/leads", label: "לידים", icon: "👥" },
+  { href: "/admin/clients", label: "לקוחות", icon: "📁" },
   { href: "/admin/partners", label: "שותפים", icon: "🤝" },
-  { href: "/admin/canva", label: "תוכן", icon: "✍️" },
 ];
 
 const MORE = [
+  { href: "/admin/canva", label: "תוכן" },
   { href: "/admin/plan", label: "תוכנית" },
   { href: "/admin/drafts", label: "טיוטות לאישור" },
   { href: "/admin/import", label: "ייבוא פוסטים ידני" },
