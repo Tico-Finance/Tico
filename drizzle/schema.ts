@@ -658,3 +658,47 @@ export const clientEvents = pgTable("client_events", {
   prev: jsonb("prev").$type<Record<string, unknown> | null>(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ── Content tracking ──
+
+export const contentItems = pgTable(
+  "content_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Short code used as utm_campaign in links, so leads can be attributed to this piece.
+    code: text("code").notNull(),
+    title: text("title").notNull(),
+    // instagram | facebook | tiktok | youtube | podcast | other
+    platform: text("platform").notNull().default("instagram"),
+    // post | reel | story | carousel | video | podcast | other
+    format: text("format").notNull().default("post"),
+    topic: text("topic"),
+    // idea | planned | published
+    status: text("status").notNull().default("idea"),
+    plannedAt: date("planned_at", { mode: "string" }),
+    publishedAt: date("published_at", { mode: "string" }),
+    url: text("url"),
+    caption: text("caption").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    draftPostId: uuid("draft_post_id").references((): AnyPgColumn => draftPosts.id, { onDelete: "set null" }),
+    // views, reach, likes, comments, shares, saves, followers
+    metrics: jsonb("metrics").$type<Record<string, number>>().notNull().default({}),
+    metricsAt: timestamp("metrics_at", { withTimezone: true }),
+    // Public Blob URLs of the performance screenshots.
+    screenshots: text("screenshots").array().notNull().default([]),
+    insights: text("insights"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("content_items_user_code_unique").on(t.userId, t.code),
+    unique("content_items_user_draft_unique").on(t.userId, t.draftPostId),
+  ]
+);
