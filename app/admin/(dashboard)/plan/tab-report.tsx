@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Plan } from "@/lib/business-plan/model";
 import type { DayEntry } from "@/lib/business-plan/types";
-import { dec, money } from "@/lib/business-plan/format";
+import { dec, money, cnt } from "@/lib/business-plan/format";
 import { actSum, METRICS, planSum, type Days } from "@/lib/business-plan/forecast";
 import { addD, dk, pdt } from "@/lib/business-plan/dates";
 import { Btn, Card, Num, NumInput } from "./ui";
@@ -43,7 +43,7 @@ export default function TabReport({
           <div className="flex flex-col gap-1.5">
             {METRICS.map((m) => {
               const pl = planSum(plan1, m.key, wa, today, ps), ac = actSum(days, m.field, wa, today), r = pl > 0 ? ac / pl : 0;
-              const f = (v: number) => (m.key === "income" ? money(v) : dec(v));
+              const f = (v: number) => (m.key === "income" ? money(v) : cnt(v));
               return (
                 <div key={m.key} className="grid grid-cols-[minmax(110px,150px)_1fr_auto] items-center gap-3 py-1 max-sm:grid-cols-[1fr_auto]">
                   <span>{m.label}</span>

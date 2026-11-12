@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanSettings } from "@/lib/business-plan/types";
 import { yearNeeds, type YearSummary } from "@/lib/business-plan/targets";
-import { MONTHS, money, nf } from "@/lib/business-plan/format";
+import { MONTHS, cnt, money, nf } from "@/lib/business-plan/format";
 import { closePlanYearAction, createPlanYearAction, reopenPlanYearAction } from "./actions";
 import { cx } from "./ui";
 
@@ -71,8 +71,8 @@ function ClosedSummary({ s }: { s: YearSummary }) {
       <ul className="mt-2 grid grid-cols-3 gap-2 text-center text-sm">
         {rows.map(([l, v]) => (
           <li key={l} className="rounded-xl bg-primary/5 p-2">
-            <div className="text-lg font-bold text-primary">{nf(v.actual)}</div>
-            <div className="text-xs text-foreground/60">{l} · תוכנית {nf(v.plan)}</div>
+            <div className="text-lg font-bold text-primary">{cnt(v.actual)}</div>
+            <div className="text-xs text-foreground/60">{l} · תוכנית {cnt(v.plan)}</div>
           </li>
         ))}
       </ul>
@@ -84,11 +84,11 @@ function ClosedSummary({ s }: { s: YearSummary }) {
 export function NeedsCard({ S, year }: { S: PlanSettings; year: number }) {
   const n = yearNeeds(S, year);
   const items: [string, string][] = [
-    ["לקוחות חדשים", nf(n.cases)],
-    ["פגישות לקוחות", nf(n.meetings)],
-    ["לידים", nf(n.leads)],
-    ["תכנים שמתפרסמים", `${nf(n.content / n.weeks)} בשבוע`],
-    ["פניות לשותפים", `${nf(n.outreach / n.weeks)} בשבוע`],
+    ["לקוחות חדשים", cnt(n.cases)],
+    ["פגישות לקוחות", cnt(n.meetings)],
+    ["לידים", cnt(n.leads)],
+    ["תכנים שמתפרסמים", `${cnt(n.content / n.weeks)} בשבוע`],
+    ["פניות לשותפים", `${cnt(n.outreach / n.weeks)} בשבוע`],
     ["שעות עבודה", `${nf(n.hoursPerWeek)} בשבוע`],
   ];
   return (

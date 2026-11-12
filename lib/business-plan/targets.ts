@@ -124,9 +124,9 @@ export function summarizeYear(S: PlanSettings, year: number, days: Record<string
     target: S.target,
     income: months.reduce((a, x) => a + x.actual, 0),
     months,
-    leads: { plan: Math.round(P.leads), actual: leads },
-    meetings: { plan: Math.round(P.meet), actual: meetings },
-    signed: { plan: Math.round(P.cases), actual: signed },
+    leads: { plan: Math.ceil(P.leads), actual: leads },
+    meetings: { plan: Math.ceil(P.meet), actual: meetings },
+    signed: { plan: Math.ceil(P.cases), actual: signed },
     costs: Math.round(expensesActual ?? P.costs),
   };
 }
@@ -145,7 +145,7 @@ export interface GoalRow { key: string; label: string; done: number; target: num
 
 /** This week's actuals against what the plan asks, as rows for the day and progress screens. */
 export function weekGoalRows(t: WeeklyTargets, w: { messages: number; meetings: number; content: number; leads: number }): GoalRow[] {
-  const want = (x: number) => (x > 0 ? Math.max(1, Math.round(x)) : 0);
+  const want = (x: number) => (x > 0 ? Math.max(1, Math.ceil(x - 1e-6)) : 0);
   const rows: GoalRow[] = [
     { key: "outreach", label: "פניות לשותפים", done: w.messages, target: want(t.outreach), href: "/admin/partners" },
     { key: "meetings", label: "פגישות עם שותפים", done: w.meetings, target: want(t.partnerMeetings), href: "/admin/partners" },
