@@ -93,9 +93,11 @@ async function copyText(text: string): Promise<boolean> {
 export default function PartnersApp({
   initialRows,
   initialEvents,
+  initialOpenId = null,
 }: {
   initialRows: PartnerRow[];
   initialEvents: PartnerEventRow[];
+  initialOpenId?: string | null;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [events, setEvents] = useState(initialEvents);
@@ -103,7 +105,7 @@ export default function PartnersApp({
   const [kind, setKind] = useState<KindFilter>("broker");
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [today] = useState(() => todayIL());

@@ -52,10 +52,10 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export default function ContentApp({ initialRows, leadCounts }: { initialRows: ContentRow[]; leadCounts: Record<string, number> }) {
+export default function ContentApp({ initialRows, leadCounts, initialOpenId = null }: { initialRows: ContentRow[]; leadCounts: Record<string, number>; initialOpenId?: string | null }) {
   const [rows, setRows] = useState(initialRows);
   const [view, setView] = useState<View>("board");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");

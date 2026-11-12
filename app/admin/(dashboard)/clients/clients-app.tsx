@@ -108,16 +108,18 @@ export default function ClientsApp({
   initialRows,
   initialEvents,
   leadOptions,
+  initialOpenId = null,
 }: {
   initialRows: ClientRow[];
   initialEvents: ClientEventRow[];
   leadOptions: LeadOption[];
+  initialOpenId?: string | null;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [events, setEvents] = useState(initialEvents);
   const [leads, setLeads] = useState(leadOptions);
   const [view, setView] = useState<View>("updates");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [today] = useState(() => todayIL());
