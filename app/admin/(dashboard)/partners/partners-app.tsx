@@ -19,6 +19,9 @@ import {
   hasPlaceholders,
   hooksFor,
   instagramLink,
+  socialLink,
+  SOCIAL_LABELS,
+  type SocialPlatform,
   partnerWhatsappLink,
   suggestTemplate,
   templateById,
@@ -31,13 +34,14 @@ import {
 import { addPartnerNoteAction, createPartnerAction, importPartnersAction, performPartnerAction, undoPartnerActionAction, updatePartnerAction } from "./actions";
 import type { PartnerEventRow, PartnerRow } from "./types";
 
-type View = "today" | "board" | "list" | "visits" | "templates" | "hooks" | "archive";
+type View = "today" | "board" | "list" | "links" | "visits" | "templates" | "hooks" | "archive";
 type KindFilter = PartnerKind | "all";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "today", label: "היום" },
   { id: "board", label: "צנרת" },
   { id: "list", label: "כל השותפים" },
+  { id: "links", label: "קישורים" },
   { id: "visits", label: "ביקורים" },
   { id: "templates", label: "הודעות" },
   { id: "hooks", label: "מה עובד" },
@@ -102,6 +106,7 @@ export default function PartnersApp({
   const [rows, setRows] = useState(initialRows);
   const [events, setEvents] = useState(initialEvents);
   const [view, setView] = useState<View>("today");
+  const [onlyNoLinks, setOnlyNoLinks] = useState(false);
   const [kind, setKind] = useState<KindFilter>("broker");
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
@@ -228,6 +233,22 @@ export default function PartnersApp({
     </div>
   );
 
+  // Direct links to the partner's pages; a tap opens the page without opening the card.
+  const socialChips = (p: PartnerRow) => {
+    const items = (["instagram", "facebook", "tiktok"] as SocialPlatform[])
+      .map((pl) => ({ pl, href: socialLink(pl, p[pl]) }))
+      .filter((x): x is { pl: SocialPlatform; href: string } => !!x.href);
+    if (items.length === 0) return null;
+    return (
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {items.map(({ pl, href }) => (
+          <a key={pl} href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+            className="rounded-full border border-primary/30 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/5">{SOCIAL_LABELS[pl]} ↗</a>
+        ))}
+      </div>
+    );
+  };
+
   const partnerCard = (p: PartnerRow) => {
     return (
       <div key={p.id} onClick={() => setOpenId(p.id)} className="mb-2 cursor-pointer rounded-lg border border-black/5 bg-surface p-2.5 shadow-sm hover:border-button">
@@ -239,6 +260,7 @@ export default function PartnersApp({
           {p.wave && <Chip>{WAVE_LABELS[p.wave] ?? p.wave}</Chip>}
           {p.priority && <Chip tone={p.priority === "גבוהה" ? "bg-emerald-100 text-emerald-800" : undefined}>{p.priority}</Chip>}
         </div>
+        {socialChips(p)}
       </div>
     );
   }
@@ -363,6 +385,47 @@ export default function PartnersApp({
     );
   };
 
+  const linksView = () => {
+    let list = byKind(live);
+    const t = q.trim().toLowerCase();
+    if (t) list = list.filter((p) => [p.name, p.org, p.instagram, p.facebook, p.tiktok, p.area].join(" ").toLowerCase().includes(t));
+    if (onlyNoLinks) list = list.filter((p) => !socialLink("instagram", p.instagram) && !socialLink("facebook", p.facebook) && !socialLink("tiktok", p.tiktok));
+    list = [...list].sort((a, b) => a.name.localeCompare(b.name, "he"));
+    const withLinks = byKind(live).filter((p) => socialLink("instagram", p.instagram) || socialLink("facebook", p.facebook) || socialLink("tiktok", p.tiktok)).length;
+    return (
+      <>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {kindTabs()}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם…" className={`${field} md:w-56`} />
+          <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={onlyNoLinks} onChange={(e) => setOnlyNoLinks(e.target.checked)} /> רק בלי קישור</label>
+          <span className="text-sm text-foreground/60">{withLinks} מתוך {byKind(live).length} עם קישור</span>
+        </div>
+        <div className={box}>
+          {list.map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-black/5 py-2.5 first:border-t-0">
+              <button onClick={() => setOpenId(p.id)} className="min-w-0 text-start">
+                <div className="font-bold">{p.name}</div>
+                <div className="truncate text-xs text-foreground/60">{KIND_LABELS[p.kind]}{p.org ? ` · ${p.org}` : ""}</div>
+              </button>
+              <div className="flex flex-wrap gap-1.5">
+                {(["instagram", "facebook", "tiktok"] as SocialPlatform[]).map((pl) => {
+                  const href = socialLink(pl, p[pl]);
+                  return href
+                    ? <a key={pl} href={href} target="_blank" rel="noopener noreferrer" className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white">{SOCIAL_LABELS[pl]} ↗</a>
+                    : null;
+                })}
+                {!socialLink("instagram", p.instagram) && !socialLink("facebook", p.facebook) && !socialLink("tiktok", p.tiktok) && (
+                  <button onClick={() => setOpenId(p.id)} className="rounded-full border border-dashed border-black/20 px-3 py-1 text-xs text-foreground/60">+ הוסף קישור</button>
+                )}
+              </div>
+            </div>
+          ))}
+          {list.length === 0 && <div className="text-sm text-foreground/60">אין שותפים בסינון הזה.</div>}
+        </div>
+      </>
+    );
+  };
+
   const visitsView = () => {
     const a = live.filter((p) => p.kind !== "broker" && p.stage !== "dead");
     const prio: Record<string, number> = { "גבוהה": 0, "בינונית": 1, "נמוכה": 2 };
@@ -483,7 +546,7 @@ export default function PartnersApp({
   };
 
   const body =
-    view === "today" ? todayView() : view === "board" ? boardView() : view === "list" ? listView() :
+    view === "today" ? todayView() : view === "board" ? boardView() : view === "list" ? listView() : view === "links" ? linksView() :
     view === "visits" ? visitsView() : view === "templates" ? templatesView() : view === "hooks" ? hooksView() : archiveView();
 
   return (
@@ -663,7 +726,7 @@ function Drawer({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
-          {text1("name", "שם")}{text1("org", "משרד / יזם")}{text1("instagram", "אינסטגרם")}{text1("phone", "טלפון")}{text1("area", "אזור")}{text1("address", "כתובת")}
+          {text1("name", "שם")}{text1("org", "משרד / יזם")}{text1("instagram", "אינסטגרם (קישור או @)")}{text1("facebook", "פייסבוק (קישור)")}{text1("tiktok", "טיקטוק (קישור או @)")}{text1("phone", "טלפון")}{text1("area", "אזור")}{text1("address", "כתובת")}
           <label className="block text-xs text-foreground/60">
             גל
             <select value={p.wave ?? ""} onChange={(e) => void patch(p.id, { wave: e.target.value || null })} className={`${field} mt-0.5 text-foreground`}>
@@ -731,7 +794,7 @@ function AddForm({ onClose, onCreate }: { onClose: () => void; onCreate: (input:
               {PARTNER_KINDS.map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
             </select>
           </label>
-          {f("name", "שם")}{f("phone", "טלפון", { inputMode: "tel" })}{f("org", "משרד / יזם")}{f("instagram", "אינסטגרם")}{f("area", "אזור")}{f("address", "כתובת")}
+          {f("name", "שם")}{f("phone", "טלפון", { inputMode: "tel" })}{f("org", "משרד / יזם")}{f("instagram", "אינסטגרם")}{f("facebook", "פייסבוק")}{f("tiktok", "טיקטוק")}{f("area", "אזור")}{f("address", "כתובת")}
           <label className="col-span-full block text-xs text-foreground/60">
             הערה
             <textarea value={v.notes ?? ""} onChange={set("notes")} rows={3} className={`${field} mt-0.5 text-foreground`} />

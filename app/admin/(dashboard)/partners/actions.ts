@@ -32,6 +32,8 @@ export async function createPartnerAction(input: unknown): Promise<Result<{ part
       name: v.name,
       org: clean(v.org),
       instagram: clean(v.instagram),
+      facebook: clean(v.facebook),
+      tiktok: clean(v.tiktok),
       phone: clean(v.phone),
       area: clean(v.area),
       address: clean(v.address),
@@ -65,6 +67,8 @@ export async function updatePartnerAction(id: string, patch: unknown): Promise<R
   if (v.name !== undefined) set.name = v.name;
   if (v.org !== undefined) set.org = clean(v.org);
   if (v.instagram !== undefined) set.instagram = clean(v.instagram);
+  if (v.facebook !== undefined) set.facebook = clean(v.facebook);
+  if (v.tiktok !== undefined) set.tiktok = clean(v.tiktok);
   if (v.phone !== undefined) set.phone = clean(v.phone);
   if (v.area !== undefined) set.area = clean(v.area);
   if (v.address !== undefined) set.address = clean(v.address);

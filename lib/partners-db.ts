@@ -108,6 +108,8 @@ export async function importPartners(userId: string, items: PartnerImportItem[])
         name: it.name,
         org: clean(it.org),
         instagram: clean(it.instagram),
+        facebook: clean(it.facebook),
+        tiktok: clean(it.tiktok),
         phone: clean(it.phone),
         area: clean(it.area),
         address: clean(it.address),
