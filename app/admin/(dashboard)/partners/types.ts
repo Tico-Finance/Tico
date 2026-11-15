@@ -7,6 +7,8 @@ export interface PartnerRow {
   name: string;
   org: string | null;
   instagram: string | null;
+  facebook: string | null;
+  tiktok: string | null;
   phone: string | null;
   area: string | null;
   address: string | null;
@@ -46,6 +48,8 @@ export function toPartnerRow(r: typeof partners.$inferSelect): PartnerRow {
     name: r.name,
     org: r.org,
     instagram: r.instagram,
+    facebook: r.facebook,
+    tiktok: r.tiktok,
     phone: r.phone,
     area: r.area,
     address: r.address,

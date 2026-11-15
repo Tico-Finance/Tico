@@ -338,8 +338,22 @@ export function partnerWhatsappLink(phone: string | null | undefined, text?: str
   return base && text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }
 
+export type SocialPlatform = "instagram" | "facebook" | "tiktok";
+export const SOCIAL_LABELS: Record<SocialPlatform, string> = { instagram: "אינסטגרם", facebook: "פייסבוק", tiktok: "טיקטוק" };
+const SOCIAL_BASE: Record<SocialPlatform, string> = { instagram: "https://instagram.com/", facebook: "https://facebook.com/", tiktok: "https://www.tiktok.com/@" };
+
+/** A link to the page, from a full address, a domain path or a handle (with or without @). */
+export function socialLink(platform: SocialPlatform, value: string | null | undefined): string | null {
+  const v = (value ?? "").trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^(www\.)?(instagram|facebook|fb|tiktok)\.[a-z]+\//i.test(v)) return `https://${v}`;
+  const handle = v.replace(/^@/, "");
+  return /^[\w.\-]+$/.test(handle) ? `${SOCIAL_BASE[platform]}${handle}` : null;
+}
+
 export function instagramLink(handle: string | null | undefined): string | null {
-  return handle && handle.startsWith("@") ? `https://instagram.com/${encodeURIComponent(handle.slice(1))}` : null;
+  return socialLink("instagram", handle);
 }
 
 // ── Validation ──
@@ -350,7 +364,9 @@ export const partnerInputSchema = z.object({
   kind: z.enum(PARTNER_KINDS).default("broker"),
   name: short(160).min(1),
   org: short(160).optional().nullable(),
-  instagram: short(80).optional().nullable(),
+  instagram: short(200).optional().nullable(),
+  facebook: short(300).optional().nullable(),
+  tiktok: short(300).optional().nullable(),
   phone: short(60).optional().nullable(),
   area: short(160).optional().nullable(),
   address: short(200).optional().nullable(),

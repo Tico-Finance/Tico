@@ -569,6 +569,9 @@ export const partners = pgTable(
     name: text("name").notNull(),
     org: text("org"),
     instagram: text("instagram"),
+    // A page link or a @handle, like the Instagram field.
+    facebook: text("facebook"),
+    tiktok: text("tiktok"),
     phone: text("phone"),
     area: text("area"),
     address: text("address"),
