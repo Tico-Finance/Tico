@@ -1,6 +1,6 @@
 // חישוב מקוצר, באותם כללים כמו כלי האיפיון המלא: יחס החזר עד 38% מההכנסה
 // הפנויה, תקרת מימון לפי סוג הנכס, וטבלת תמהילים ותקופות
-// (ריבית ממוצעת: צמוד מדד 2.8%, לא צמוד מדד 4.5%).
+// (ריבית ממוצעת: צמוד מדד 3.2%, לא צמוד מדד 4.8%).
 export type DealType = "first" | "replacement" | "investment";
 export const DEAL_LABELS: Record<DealType, string> = {
   first: "דירה יחידה",
@@ -9,8 +9,8 @@ export const DEAL_LABELS: Record<DealType, string> = {
 };
 const LTV: Record<DealType, number> = { first: 0.75, replacement: 0.7, investment: 0.5 };
 const PTI = 0.38;
-const LINKED = 2.8;
-const UNLINKED = 4.5;
+const LINKED = 3.2;
+const UNLINKED = 4.8;
 export const TERMS = [15, 20, 25, 30] as const;
 export const MIXES = [
   { id: "l100", label: "100% צמוד", linked: 1 },
