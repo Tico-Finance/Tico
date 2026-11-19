@@ -5,16 +5,16 @@
 
 ```js
 const SECRET = "שנה-לסיסמה-ארוכה";
-const HEADERS = ["תאריך","שם","טלפון","גיל","הכנסה נטו","התחייבויות","שווי נכס","הון עצמי","סוג עסקה","משכנתה אפשרית","משכנתה נדרשת","החזר חודשי","ריאלי?","אישור קשר"];
+const HEADERS = ["תאריך","שם","טלפון","מייל","הכנסה נטו","התחייבויות","הון עצמי","סוג נכס","משכנתה אפשרית","שווי נכס מקסימלי","החזר חודשי","אישור שליחה"];
 
 function doPost(e) {
   const d = JSON.parse(e.postData.contents);
   if (d.secret !== SECRET) return ContentService.createTextOutput("forbidden");
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   if (sh.getLastRow() === 0) sh.appendRow(HEADERS);
-  sh.appendRow([new Date(), d.name, "'" + d.phone, d.age, d.income, d.obligations,
-    d.propertyValue, d.equity, d.deal, d.maxMortgage, d.neededMortgage,
-    d.monthlyPayment, d.realistic, d.consent ? "כן" : "לא"]);
+  sh.appendRow([new Date(), d.name, "'" + d.phone, d.email, d.income, d.obligations,
+    d.equity, d.deal, d.maxMortgage, d.maxPrice,
+    d.monthlyPayment, d.consent ? "כן" : "לא"]);
   return ContentService.createTextOutput("ok");
 }
 ```

@@ -1,19 +1,17 @@
-// חישוב מקוצר - אותם עקרונות כמו הכלי המלא: יחס החזר עד 38% מההכנסה הפנויה,
-// תקרת מימון לפי סוג עסקה, ותמהיל ממוצע של ריבית צמודה ולא צמודה.
+// חישוב מקוצר: יחס החזר עד 38% מההכנסה הפנויה, תקרת מימון לפי סוג הנכס,
+// ותמהיל ממוצע של ריבית צמודה ולא צמודה, ל-30 שנה.
 export type DealType = "first" | "replacement" | "investment";
 export const DEAL_LABELS: Record<DealType, string> = {
-  first: "דירה ראשונה / יחידה",
+  first: "דירה יחידה",
   replacement: "דירה חלופית",
-  investment: "דירה להשקעה",
+  investment: "דירה נוספת",
 };
 const LTV: Record<DealType, number> = { first: 0.75, replacement: 0.7, investment: 0.5 };
 const PTI = 0.38;
-const BLENDED_RATE = 0.34 * 0.028 + 0.66 * 0.045; // שנתי
+const YEARS = 30;
+const BLENDED_RATE = 0.34 * 0.028 + 0.66 * 0.045;
 
-export type Input = {
-  age: number; income: number; obligations: number;
-  propertyValue: number; equity: number; deal: DealType;
-};
+export type Input = { income: number; obligations: number; equity: number; deal: DealType };
 
 function factor(years: number) {
   const r = BLENDED_RATE / 12, n = years * 12;
@@ -21,17 +19,18 @@ function factor(years: number) {
 }
 
 export function calc(i: Input) {
-  const years = Math.min(30, Math.max(4, 75 - i.age));
   const disposable = Math.max(i.income - i.obligations, 0);
   const maxPayment = disposable * PTI;
-  const byIncome = maxPayment * factor(years);
-  const byLtv = i.propertyValue * LTV[i.deal];
-  const maxMortgage = Math.max(Math.min(byIncome, byLtv), 0);
-  const needed = Math.max(i.propertyValue - i.equity, 0);
-  const payment = needed / factor(years);
-  const ptiActual = disposable > 0 ? (payment / disposable) * 100 : 0;
-  const enough = needed <= maxMortgage;
-  const equityMissing = Math.max(needed - maxMortgage, 0);
-  const limitedBy = byIncome < byLtv ? "income" : "ltv";
-  return { years, maxMortgage, needed, payment, ptiActual, enough, equityMissing, limitedBy, maxPayment };
+  const byIncome = maxPayment * factor(YEARS);
+  const ltv = LTV[i.deal];
+  // שווי נכס מקסימלי: מוגבל גם ביכולת ההחזר (הון + משכנתה) וגם באחוז המימון (הון / (1 - מימון)).
+  const priceByIncome = i.equity + byIncome;
+  const priceByLtv = i.equity / (1 - ltv);
+  const maxPrice = Math.min(priceByIncome, priceByLtv);
+  const maxMortgage = Math.max(maxPrice - i.equity, 0);
+  const payment = maxMortgage / factor(YEARS);
+  return {
+    maxMortgage, maxPrice, payment, maxPayment, ltvPercent: ltv * 100,
+    limitedBy: priceByIncome <= priceByLtv ? "income" : "equity",
+  };
 }
