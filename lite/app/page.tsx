@@ -22,7 +22,7 @@ function Table({ r }: { r: R }) {
   return (
     <div>
       <h3 className="mb-1 text-sm font-bold">טבלת יכולת מימון - לפי תמהיל ותקופת ההלוואה</h3>
-      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">כל הסכומים ב-₪. בכל תא: סכום המשכנתה, ומתחתיו ההחזר החודשי. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלך.</p>
+      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">כל הסכומים ב-₪. בכל תא: למעלה, מודגש, ההחזר החודשי. מתחתיו, בקטן, סכום המשכנתה המקסימלית. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלך.</p>
       <table className="w-full table-fixed border-collapse text-center text-[10px]">
         <thead>
           <tr className="bg-[#2E8B57]/10">
@@ -36,8 +36,8 @@ function Table({ r }: { r: R }) {
               <td className="p-1 text-start font-semibold leading-tight">{row.mix.label}</td>
               {row.cells.map((c) => (
                 <td key={c.years} className="px-0.5 py-1.5">
-                  <div className="whitespace-nowrap text-[11px] font-bold">{nf.format(Math.round(c.mortgage))}</div>
-                  <div className="whitespace-nowrap text-[9px] text-[#1A1A2E]/60">{nf.format(Math.round(c.payment))} / חודש</div>
+                  <div className="whitespace-nowrap text-xs font-bold">{nf.format(Math.round(c.payment))}</div>
+                  <div className="whitespace-nowrap text-[9px] text-[#1A1A2E]/60">{nf.format(Math.round(c.mortgage))}</div>
                 </td>
               ))}
             </tr>
