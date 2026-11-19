@@ -15,8 +15,8 @@ export const TERMS = [15, 20, 25, 30] as const;
 export const MIXES = [
   { id: "l100", label: "100% צמוד", linked: 1 },
   { id: "u100", label: "100% לא צמוד", linked: 0 },
-  { id: "l34", label: "34% צמוד, 66% לא", linked: 0.34 },
-  { id: "l66", label: "66% צמוד, 34% לא", linked: 0.66 },
+  { id: "l33", label: "1/3 צמוד, 2/3 לא צמוד", linked: 1 / 3 },
+  { id: "l67", label: "2/3 צמוד, 1/3 לא צמוד", linked: 2 / 3 },
 ] as const;
 
 export type Input = { income: number; obligations: number; equity: number; deal: DealType };

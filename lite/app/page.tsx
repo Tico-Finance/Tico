@@ -18,10 +18,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputCls = "rounded-lg border border-[#AFCDBF] bg-white px-3 py-3 text-base font-normal outline-none focus:border-[#2E8B57]";
 
 type R = ReturnType<typeof calc>;
-function Table({ title, r, pick }: { title: string; r: R; pick: (c: R["rows"][number]["cells"][number]) => number }) {
+function Table({ r }: { r: R }) {
   return (
     <div>
-      <h3 className="mb-1 text-sm font-bold">{title}</h3>
+      <h3 className="mb-1 text-sm font-bold">טבלת יכולת מימון - לפי תמהיל ותקופת ההלוואה</h3>
+      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">בכל תא: סכום המשכנתה, ומתחתיו ההחזר החודשי. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלך.</p>
       <table className="w-full border-collapse text-center text-[11px]">
         <thead>
           <tr className="bg-[#2E8B57]/10">
@@ -31,9 +32,14 @@ function Table({ title, r, pick }: { title: string; r: R; pick: (c: R["rows"][nu
         </thead>
         <tbody>
           {r.rows.map((row) => (
-            <tr key={row.mix.id} className="border-b border-[#C8DDD2]">
+            <tr key={row.mix.id} className="border-b border-[#C8DDD2] align-top">
               <td className="p-1.5 text-start font-semibold">{row.mix.label}</td>
-              {row.cells.map((c) => <td key={c.years} className="p-1.5">{nf.format(Math.round(pick(c)))}</td>)}
+              {row.cells.map((c) => (
+                <td key={c.years} className="p-1.5">
+                  <div className="whitespace-nowrap text-xs font-bold">{nf.format(Math.round(c.mortgage))} ₪</div>
+                  <div className="whitespace-nowrap text-[10px] text-[#1A1A2E]/60">{nf.format(Math.round(c.payment))} / חודש</div>
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -152,9 +158,7 @@ export default function Page() {
                 ? "הסכום מוגבל על ידי יכולת ההחזר מההכנסה."
                 : `הסכום מוגבל על ידי אחוז המימון המותר (${r.ltvPercent}%) ביחס להון העצמי.`}
             </p>
-            <Table title="כמה אפשר לרכוש (שווי נכס)" r={r} pick={(c) => c.price} />
-            <Table title="המשכנתה לפי תמהיל ותקופה" r={r} pick={(c) => c.mortgage} />
-            <Table title="ההחזר החודשי" r={r} pick={(c) => c.payment} />
+            <Table r={r} />
             <a href={`https://wa.me/${WA}?text=${waText}`} className="rounded-xl bg-[#25D366] px-4 py-3 text-center text-base font-bold text-white">
               שלח לצ'יקו בוואטסאפ
             </a>
