@@ -77,8 +77,8 @@ const WORKING_PTI_CAP_PERCENT = 38;
 
 // יכולת המימון מחושבת לפי תמהיל בין שני מסלולי ריבית ממוצעים - צמוד
 // מדד ולא צמוד מדד - ולפי תקופות הלוואה סטנדרטיות.
-const LINKED_RATE_PERCENT = 2.8;
-const UNLINKED_RATE_PERCENT = 4.5;
+const LINKED_RATE_PERCENT = 3.2;
+const UNLINKED_RATE_PERCENT = 4.8;
 const TERM_OPTIONS_YEARS = [15, 20, 25, 30] as const;
 
 type MixOption = {
