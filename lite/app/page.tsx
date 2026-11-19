@@ -130,6 +130,7 @@ export default function Page() {
               <input type="checkbox" className="mt-0.5 h-4 w-4" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} />
               אני מאשר/ת את שליחת הפרטים לצ'יקו פייננס וליצירת קשר איתי בטלפון, בוואטסאפ או במייל.
             </label>
+            <p className="text-xs text-[#1A1A2E]/60">התוצאה היא הערכה בלבד ואינה המלצה או ייעוץ פרטני לאף מקרה.</p>
             {err && <p className="text-sm font-semibold text-[#C0392B]">{err}</p>}
             <button disabled={busy} className="rounded-xl bg-[#2E8B57] px-4 py-3 text-base font-bold text-white disabled:opacity-60">
               {busy ? "מחשב..." : "חשב"}
@@ -143,6 +144,9 @@ export default function Page() {
               <div className="text-3xl font-extrabold text-[#2E8B57]">{ils(r.best.price)}</div>
               <div className="text-xs text-[#1A1A2E]/70">עם משכנתה של עד {ils(r.best.mortgage)}</div>
             </div>
+            <p className="rounded-lg border border-[#B8860B]/40 bg-[#B8860B]/10 p-3 text-xs font-semibold text-[#7a5a08]">
+              זו הערכה בלבד. אין בה המלצה או ייעוץ פרטני לאף מקרה, והיא אינה התחייבות לאישור אשראי. התוצאה בפועל תלויה בבנק, בדוח האשראי ובבדיקה מלאה.
+            </p>
             <p className="text-xs text-[#1A1A2E]/60">
               {r.limitedBy === "income"
                 ? "הסכום מוגבל על ידי יכולת ההחזר מההכנסה."
@@ -156,9 +160,6 @@ export default function Page() {
             </a>
             <a href="tel:0507700322" className="text-center text-sm underline">או התקשר: 050-7700322</a>
             {!saved && <p className="text-xs text-[#1A1A2E]/60">אם לא תשמע ממני תוך יום, שלח לי בוואטסאפ ואחזור אליך.</p>}
-            <p className="text-xs text-[#1A1A2E]/50">
-              זו הערכה ראשונית בלבד ואינה ייעוץ או התחייבות לאישור אשראי. התוצאה בפועל תלויה בבנק, בדוח האשראי ובבדיקה מלאה.
-            </p>
           </section>
         )}
         <p className="text-center text-xs text-[#1A1A2E]/50">TICO FINANCE · אדריכל המשכנתאות</p>
