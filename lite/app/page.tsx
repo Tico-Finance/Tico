@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { calc, DEAL_LABELS, type DealType } from "./calc";
+import { calc, DEAL_LABELS, TERMS, type DealType } from "./calc";
 
 const WA = "972507700322";
 const nf = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 });
@@ -16,6 +16,31 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 const inputCls = "rounded-lg border border-[#AFCDBF] bg-white px-3 py-3 text-base font-normal outline-none focus:border-[#2E8B57]";
+
+type R = ReturnType<typeof calc>;
+function Table({ title, r, pick }: { title: string; r: R; pick: (c: R["rows"][number]["cells"][number]) => number }) {
+  return (
+    <div>
+      <h3 className="mb-1 text-sm font-bold">{title}</h3>
+      <table className="w-full border-collapse text-center text-[11px]">
+        <thead>
+          <tr className="bg-[#2E8B57]/10">
+            <th className="w-[30%] p-1.5 text-start">תמהיל</th>
+            {TERMS.map((t) => <th key={t} className="p-1.5">{t} שנה</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {r.rows.map((row) => (
+            <tr key={row.mix.id} className="border-b border-[#C8DDD2]">
+              <td className="p-1.5 text-start font-semibold">{row.mix.label}</td>
+              {row.cells.map((c) => <td key={c.years} className="p-1.5">{nf.format(Math.round(pick(c)))}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function Page() {
   const [f, setF] = useState({
@@ -48,8 +73,8 @@ export default function Page() {
         body: JSON.stringify({
           name: f.name, phone: f.phone, email: f.email.trim(), consent: true, website: f.website,
           income: input.income, obligations: input.obligations, equity: input.equity,
-          deal: DEAL_LABELS[f.deal], maxMortgage: Math.round(r.maxMortgage),
-          maxPrice: Math.round(r.maxPrice), monthlyPayment: Math.round(r.payment),
+          deal: DEAL_LABELS[f.deal], maxMortgage: Math.round(r.best.mortgage),
+          maxPrice: Math.round(r.best.price), monthlyPayment: Math.round(r.best.payment),
           createdAt: new Date().toISOString(),
         }),
       });
@@ -62,7 +87,7 @@ export default function Page() {
   const waText = encodeURIComponent(
     `היי צ'יקו, אני ${f.name}. עשיתי את הבדיקה באתר:\nסוג נכס: ${DEAL_LABELS[f.deal]}\n` +
     `הון עצמי: ${ils(input.equity)}\nהכנסה נטו: ${ils(input.income)} | התחייבויות: ${ils(input.obligations)}\n` +
-    `משכנתה אפשרית (הערכה): עד ${ils(r.maxMortgage)}\nאשמח לדבר.`
+    `משכנתה אפשרית (הערכה): עד ${ils(r.best.mortgage)}\nאשמח לדבר.`
   );
 
   return (
@@ -114,18 +139,18 @@ export default function Page() {
           <section className="flex flex-col gap-4 rounded-2xl border border-[#C8DDD2] bg-white p-5 shadow-sm">
             <p className="text-sm text-[#1A1A2E]/70">{f.name}, זו ההערכה שלך:</p>
             <div className="rounded-xl bg-[#2E8B57]/10 p-4 text-center">
-              <div className="text-sm">משכנתה אפשרית, עד</div>
-              <div className="text-3xl font-extrabold text-[#2E8B57]">{ils(r.maxMortgage)}</div>
+              <div className="text-sm">אפשר לרכוש נכס בשווי של עד</div>
+              <div className="text-3xl font-extrabold text-[#2E8B57]">{ils(r.best.price)}</div>
+              <div className="text-xs text-[#1A1A2E]/70">עם משכנתה של עד {ils(r.best.mortgage)}</div>
             </div>
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-[#1A1A2E]/60">שווי נכס מקסימלי</dt><dd className="font-bold">{ils(r.maxPrice)}</dd></div>
-              <div><dt className="text-[#1A1A2E]/60">החזר חודשי משוער</dt><dd className="font-bold">{ils(r.payment)}</dd></div>
-            </dl>
             <p className="text-xs text-[#1A1A2E]/60">
               {r.limitedBy === "income"
                 ? "הסכום מוגבל על ידי יכולת ההחזר מההכנסה."
                 : `הסכום מוגבל על ידי אחוז המימון המותר (${r.ltvPercent}%) ביחס להון העצמי.`}
             </p>
+            <Table title="כמה אפשר לרכוש (שווי נכס)" r={r} pick={(c) => c.price} />
+            <Table title="המשכנתה לפי תמהיל ותקופה" r={r} pick={(c) => c.mortgage} />
+            <Table title="ההחזר החודשי" r={r} pick={(c) => c.payment} />
             <a href={`https://wa.me/${WA}?text=${waText}`} className="rounded-xl bg-[#25D366] px-4 py-3 text-center text-base font-bold text-white">
               שלח לצ'יקו בוואטסאפ
             </a>

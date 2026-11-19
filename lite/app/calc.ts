@@ -1,5 +1,6 @@
-// חישוב מקוצר: יחס החזר עד 38% מההכנסה הפנויה, תקרת מימון לפי סוג הנכס,
-// ותמהיל ממוצע של ריבית צמודה ולא צמודה, ל-30 שנה.
+// חישוב מקוצר, באותם כללים כמו כלי האיפיון המלא: יחס החזר עד 38% מההכנסה
+// הפנויה, תקרת מימון לפי סוג הנכס, וטבלת תמהילים ותקופות
+// (ריבית ממוצעת: צמוד מדד 2.8%, לא צמוד מדד 4.5%).
 export type DealType = "first" | "replacement" | "investment";
 export const DEAL_LABELS: Record<DealType, string> = {
   first: "דירה יחידה",
@@ -8,29 +9,46 @@ export const DEAL_LABELS: Record<DealType, string> = {
 };
 const LTV: Record<DealType, number> = { first: 0.75, replacement: 0.7, investment: 0.5 };
 const PTI = 0.38;
-const YEARS = 30;
-const BLENDED_RATE = 0.34 * 0.028 + 0.66 * 0.045;
+const LINKED = 2.8;
+const UNLINKED = 4.5;
+export const TERMS = [15, 20, 25, 30] as const;
+export const MIXES = [
+  { id: "l100", label: "100% צמוד", linked: 1 },
+  { id: "u100", label: "100% לא צמוד", linked: 0 },
+  { id: "l34", label: "34% צמוד, 66% לא", linked: 0.34 },
+  { id: "l66", label: "66% צמוד, 34% לא", linked: 0.66 },
+] as const;
 
 export type Input = { income: number; obligations: number; equity: number; deal: DealType };
 
-function factor(years: number) {
-  const r = BLENDED_RATE / 12, n = years * 12;
-  return (1 - Math.pow(1 + r, -n)) / r;
+function pmtFactor(rate: number, years: number) {
+  const r = rate / 100 / 12, n = years * 12;
+  return (r * 1) / (1 - Math.pow(1 + r, -n));
 }
+const blended = (linked: number, years: number) =>
+  linked * pmtFactor(LINKED, years) + (1 - linked) * pmtFactor(UNLINKED, years);
 
 export function calc(i: Input) {
   const disposable = Math.max(i.income - i.obligations, 0);
   const maxPayment = disposable * PTI;
-  const byIncome = maxPayment * factor(YEARS);
   const ltv = LTV[i.deal];
-  // שווי נכס מקסימלי: מוגבל גם ביכולת ההחזר (הון + משכנתה) וגם באחוז המימון (הון / (1 - מימון)).
-  const priceByIncome = i.equity + byIncome;
-  const priceByLtv = i.equity / (1 - ltv);
-  const maxPrice = Math.min(priceByIncome, priceByLtv);
-  const maxMortgage = Math.max(maxPrice - i.equity, 0);
-  const payment = maxMortgage / factor(YEARS);
-  return {
-    maxMortgage, maxPrice, payment, maxPayment, ltvPercent: ltv * 100,
-    limitedBy: priceByIncome <= priceByLtv ? "income" : "equity",
-  };
+  const priceCapByLtv = i.equity / (1 - ltv);
+
+  const rows = MIXES.map((mix) => ({
+    mix,
+    cells: TERMS.map((years) => {
+      const f = blended(mix.linked, years);
+      const byIncome = maxPayment / f;
+      const price = Math.min(i.equity + byIncome, priceCapByLtv);
+      const mortgage = Math.max(price - i.equity, 0);
+      return { years, price, mortgage, payment: mortgage * f };
+    }),
+  }));
+
+  let best = rows[0].cells[0];
+  let bestMix: string = rows[0].mix.label;
+  rows.forEach((r) => r.cells.forEach((c) => { if (c.price > best.price) { best = c; bestMix = r.mix.label; } }));
+  const limitedBy = best.price >= priceCapByLtv - 1 ? "equity" : "income";
+
+  return { rows, best, bestMix, maxPayment, ltvPercent: ltv * 100, limitedBy };
 }
