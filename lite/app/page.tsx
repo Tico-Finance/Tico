@@ -22,22 +22,22 @@ function Table({ r }: { r: R }) {
   return (
     <div>
       <h3 className="mb-1 text-sm font-bold">טבלת יכולת מימון - לפי תמהיל ותקופת ההלוואה</h3>
-      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">בכל תא: סכום המשכנתה, ומתחתיו ההחזר החודשי. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלך.</p>
-      <table className="w-full border-collapse text-center text-[11px]">
+      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">כל הסכומים ב-₪. בכל תא: סכום המשכנתה, ומתחתיו ההחזר החודשי. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלך.</p>
+      <table className="w-full table-fixed border-collapse text-center text-[10px]">
         <thead>
           <tr className="bg-[#2E8B57]/10">
-            <th className="w-[30%] p-1.5 text-start">תמהיל</th>
-            {TERMS.map((t) => <th key={t} className="p-1.5">{t} שנה</th>)}
+            <th className="w-[25%] p-1 text-start">תמהיל</th>
+            {TERMS.map((t) => <th key={t} className="p-1">{t} שנה</th>)}
           </tr>
         </thead>
         <tbody>
           {r.rows.map((row) => (
             <tr key={row.mix.id} className="border-b border-[#C8DDD2] align-top">
-              <td className="p-1.5 text-start font-semibold">{row.mix.label}</td>
+              <td className="p-1 text-start font-semibold leading-tight">{row.mix.label}</td>
               {row.cells.map((c) => (
-                <td key={c.years} className="p-1.5">
-                  <div className="whitespace-nowrap text-xs font-bold">{nf.format(Math.round(c.mortgage))} ₪</div>
-                  <div className="whitespace-nowrap text-[10px] text-[#1A1A2E]/60">{nf.format(Math.round(c.payment))} / חודש</div>
+                <td key={c.years} className="px-0.5 py-1.5">
+                  <div className="whitespace-nowrap text-[11px] font-bold">{nf.format(Math.round(c.mortgage))}</div>
+                  <div className="whitespace-nowrap text-[9px] text-[#1A1A2E]/60">{nf.format(Math.round(c.payment))} / חודש</div>
                 </td>
               ))}
             </tr>
@@ -143,7 +143,7 @@ export default function Page() {
             </button>
           </form>
         ) : (
-          <section className="flex flex-col gap-4 rounded-2xl border border-[#C8DDD2] bg-white p-5 shadow-sm">
+          <section className="flex flex-col gap-4 rounded-2xl border border-[#C8DDD2] bg-white p-4 shadow-sm">
             <p className="text-sm text-[#1A1A2E]/70">{f.name}, זו ההערכה שלך:</p>
             <div className="rounded-xl bg-[#2E8B57]/10 p-4 text-center">
               <div className="text-sm">אפשר לרכוש נכס בשווי של עד</div>
