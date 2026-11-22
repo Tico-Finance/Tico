@@ -15,12 +15,25 @@ type Day = {
   anchorDone: boolean;
   identityNote: string;
   closed?: boolean;
+  woke?: boolean;
+  habitDone?: boolean;
+  prep?: number[];
+  missReason?: string;
+  missFix?: string;
+  obstacle?: string;
   lesson: string;
   gratitude: [string, string, string];
 };
-type Store = { step?: number; answers: Record<string, string>; completed: boolean; days: Record<string, Day> };
+type Plan = { when: string; then: string };
+type Store = { plans?: Plan[]; step?: number; answers: Record<string, string>; completed: boolean; days: Record<string, Day> };
 
 const KEY = "tico-shift:v1";
+const DEFAULT_PLANS: Plan[] = [
+  { when: "כשהשעון מצלצל", then: "אני מניח רגליים על הרצפה לפני שאני חושב." },
+  { when: "אם אני רוצה לחזור לישון", then: "אני קם, שותה כוס מים ועושה רק את ההרגל הקטן, שתי דקות." },
+  { when: "אם עברה 21:30 ואני עדיין ער", then: "אני מניח את הטלפון בחדר אחר ונכנס למיטה, גם אם לא נרדמתי." },
+];
+const PREP = ["הטלפון בחדר אחר, המטען רחוק מהמיטה", "שעון מעורר על 05:30, מחוץ להישג יד", "בגדים ומים מוכנים", "מסכים כבויים והחדר חשוך"];
 const EMPTY: Store = { answers: {}, completed: false, days: {} };
 const emptyDay = (): Day => ({
   keyAction: "", keyStatus: "", energy: 0, focus: 0, morningDone: false, anchorDone: false,
@@ -33,7 +46,7 @@ const defaultPhase = (): Phase => { const h = new Date().getHours(); return h < 
 
 function calcStreak(days: Record<string, Day>) {
   const d = new Date();
-  const ok = (k: string) => !!days[k]?.keyStatus && !!days[k]?.morningDone;
+  const ok = (k: string) => !!days[k]?.woke;
   if (!ok(dateKey(d))) d.setDate(d.getDate() - 1); // היום עוד לא נסגר: לא שוברים רצף
   let n = 0;
   while (ok(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
@@ -102,7 +115,7 @@ function Main({ store, update }: P) {
         </div>
         <div className="text-center">
           <div className="text-3xl font-bold text-accent">{streak}</div>
-          <div className="text-xs text-muted">ימים ברצף</div>
+          <div className="text-xs text-muted">ימי קימה ברצף</div>
         </div>
       </header>
       <nav className="grid grid-cols-3 rounded-xl border border-line bg-surface p-1 text-sm font-medium">
@@ -121,6 +134,10 @@ function Today({ store, update, onSos }: P & { onSos: () => void }) {
   const today = dateKey(new Date());
   const day = store.days[today] ?? emptyDay();
   const [phase, setPhase] = useState<Phase>(defaultPhase());
+  const [showMiss, setShowMiss] = useState(false);
+  const yd = new Date(); yd.setDate(yd.getDate() - 1);
+  const yest = store.days[dateKey(yd)];
+  const missedYesterday = Object.keys(store.days).some((k) => k < today) && !yest?.woke && !day.woke;
   const patch = (p: Partial<Day>) =>
     update((s) => ({ ...s, days: { ...s.days, [today]: { ...(s.days[today] ?? emptyDay()), ...p } } }));
   const a = store.answers;
@@ -134,39 +151,71 @@ function Today({ store, update, onSos }: P & { onSos: () => void }) {
       </div>
 
       <button onClick={onSos} className="w-full rounded-xl border border-accent bg-accent/10 py-2 text-sm font-semibold">מוצף או דוחה? כפתור חירום</button>
-      {day.keyAction && (
+      {missedYesterday && (
+        <div className="rounded-xl border border-accent bg-accent/10 p-4 text-sm leading-relaxed">
+          <b>אתמול לא קמת בזמן. הכלל: לא מפספסים פעמיים.</b>
+          <br />היום מספיק ההרגל הכי קטן.{yest?.missFix ? ` התוכנית שלך: ${yest.missFix}` : ""}
+        </div>
+      )}
+      {day.keyAction && phase !== "morning" && (
         <div className="rounded-xl bg-accent/15 p-4 text-sm"><b>פעולת המפתח להיום:</b> {day.keyAction}</div>
       )}
 
       {phase === "morning" && (
         <div className="space-y-4">
           <div className={card}>
-            <h2 className="font-bold">1. כיול תדר: ויזואליזציה של יעד הקצה</h2>
-            <p className="mt-2 text-sm text-muted">עצום עיניים לדקה וחווה את המטרה כעובדה קיימת:</p>
-            <ul className="mt-3 space-y-2 text-sm leading-relaxed">
-              <li><b>רואה:</b> {a.see || "—"}</li>
-              <li><b>שומע:</b> {a.hear || "—"}</li>
-              <li><b>מרגיש:</b> {a.feel || "—"}</li>
-              {a.smell && <li><b>ריח / טעם:</b> {a.smell}</li>}
-            </ul>
-            <Check checked={day.morningDone} onChange={(v) => patch({ morningDone: v })} label="עשיתי את הכיול" />
-          </div>
-          <div className={card}>
-            <h2 className="font-bold">2. הפעלת עוגן</h2>
-            <p className="mt-2 text-sm text-muted">העוגן שלך: {a.anchor || "לא הוגדר"}. הפעל אותו תוך כדי נשימה.</p>
-            <Breath />
-            <Check checked={day.anchorDone} onChange={(v) => patch({ anchorDone: v })} label="הפעלתי את העוגן" />
-          </div>
-          <div className={card}>
-            <h2 className="font-bold">3. פעולת המפתח להיום</h2>
-            <p className="mt-2 text-sm text-muted">משימה אחת בלבד שמזיזה את המחוג.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {[a.habit1, a.habit2, a.habit3].filter(Boolean).map((h) => (
-                <button key={h} className="rounded-full border border-line px-3 py-1 text-sm" onClick={() => patch({ keyAction: h })}>{h}</button>
-              ))}
+            <h2 className="font-bold">הבוקר: שני צעדים בלבד</h2>
+            <p className="mt-1 text-sm text-muted">ההרגל הקטן: {a.habit1 || "קימה בזמן"}. גם שתי דקות נחשבות.</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button onClick={() => patch({ woke: !day.woke })} className={`rounded-2xl border py-5 text-lg font-bold ${day.woke ? "border-brand bg-brand text-white dark:text-black" : "border-line"}`}>{day.woke ? "✓ קמתי" : "קמתי"}</button>
+              <button onClick={() => patch({ habitDone: !day.habitDone })} className={`rounded-2xl border py-5 text-lg font-bold ${day.habitDone ? "border-brand bg-brand text-white dark:text-black" : "border-line"}`}>{day.habitDone ? "✓ עשיתי" : "עשיתי את ההרגל"}</button>
             </div>
-            <input className={`${field} mt-3`} value={day.keyAction} placeholder="או כתוב פעולה משלך" onChange={(e) => patch({ keyAction: e.target.value })} />
+            {day.woke && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm">קמת. זה הניצחון של היום. הזהות שלך הצביעה הרגע.</p>}
+            {!day.woke && !showMiss && !day.missReason && (
+              <button className="mt-4 text-sm text-muted underline" onClick={() => setShowMiss(true)}>לא קמתי היום</button>
+            )}
+            {!day.woke && (showMiss || day.missReason) && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium">יום אחד לא שובר כלום. מה קרה, ומה הצעד הכי קטן שיעזור מחר?</p>
+                <input className={field} placeholder="מה קרה?" value={day.missReason ?? ""} onChange={(e) => patch({ missReason: e.target.value })} />
+                <input className={field} placeholder="מחר אני… (צעד קטן)" value={day.missFix ?? ""} onChange={(e) => patch({ missFix: e.target.value })} />
+              </div>
+            )}
           </div>
+          <PlansCard plans={store.plans ?? DEFAULT_PLANS} onSave={(plans) => update((st) => ({ ...st, plans }))} />
+          <details className={card}>
+            <summary className="cursor-pointer font-bold">כיול מורחב (לא חובה)</summary>
+            <div className="mt-4 space-y-5">
+              <div>
+                <p className="text-sm font-medium">הוויזואליזציה: מה אני רואה, שומע ומרגיש כשהמטרה כבר קיימת?</p>
+                <ul className="mt-2 space-y-1 text-sm leading-relaxed">
+                  <li><b>רואה:</b> {a.see || "—"}</li>
+                  <li><b>שומע:</b> {a.hear || "—"}</li>
+                  <li><b>מרגיש:</b> {a.feel || "—"}</li>
+                  {a.smell && <li><b>ריח / טעם:</b> {a.smell}</li>}
+                </ul>
+                <Check checked={day.morningDone} onChange={(v) => patch({ morningDone: v })} label="עשיתי את הכיול" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">המכשול: מה הכי סביר שיעצור אותי היום, ומה אעשה אז?</p>
+                <input className={`${field} mt-2`} value={day.obstacle ?? ""} placeholder="אם… אז…" onChange={(e) => patch({ obstacle: e.target.value })} />
+              </div>
+              <div>
+                <p className="text-sm font-medium">עוגן: {a.anchor || "לא הוגדר"}</p>
+                <Breath />
+                <Check checked={day.anchorDone} onChange={(v) => patch({ anchorDone: v })} label="הפעלתי את העוגן" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">פעולת המפתח להיום</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[a.habit1, a.habit2, a.habit3].filter(Boolean).map((h) => (
+                    <button key={h} className="rounded-full border border-line px-3 py-1 text-sm" onClick={() => patch({ keyAction: h })}>{h}</button>
+                  ))}
+                </div>
+                <input className={`${field} mt-2`} value={day.keyAction} placeholder="או כתוב פעולה משלך" onChange={(e) => patch({ keyAction: e.target.value })} />
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
@@ -187,6 +236,14 @@ function Today({ store, update, onSos }: P & { onSos: () => void }) {
 
       {phase === "evening" && (
         <div className="space-y-4">
+          <div className={card}>
+            <h2 className="font-bold">הכנה לבוקר: מה שמחליט אם תקום</h2>
+            {PREP.map((t, i) => (
+              <Check key={t} checked={!!day.prep?.includes(i)} label={t}
+                onChange={(v) => patch({ prep: v ? [...(day.prep ?? []), i] : (day.prep ?? []).filter((x) => x !== i) })} />
+            ))}
+          </div>
+          <PlansCard plans={store.plans ?? DEFAULT_PLANS} onSave={(plans) => update((st) => ({ ...st, plans }))} />
           <div className={card}>
             <h2 className="font-bold">1. האם בוצעה פעולת המפתח?</h2>
             <p className="mt-1 text-sm text-muted">{day.keyAction || "לא הוגדרה פעולה הבוקר."}</p>
@@ -217,6 +274,32 @@ function Today({ store, update, onSos }: P & { onSos: () => void }) {
           {day.keyStatus && <p className="text-center text-sm text-muted">היום נספר ברצף. עצם ההגעה לבקרת הערב היא חלק מהשינוי.</p>}
         </div>
       )}
+    </div>
+  );
+}
+
+function PlansCard({ plans, onSave }: { plans: Plan[]; onSave: (p: Plan[]) => void }) {
+  const [edit, setEdit] = useState(false);
+  return (
+    <div className={card}>
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold">התוכניות שלי לרגע הקשה</h2>
+        <button className="text-sm text-muted underline" onClick={() => setEdit(!edit)}>{edit ? "סיום" : "עריכה"}</button>
+      </div>
+      <ul className="mt-3 space-y-3 text-sm leading-relaxed">
+        {plans.map((pl, i) => (
+          <li key={i}>
+            {edit ? (
+              <div className="space-y-1">
+                <input className={field} value={pl.when} onChange={(e) => onSave(plans.map((x, k) => (k === i ? { ...x, when: e.target.value } : x)))} />
+                <input className={field} value={pl.then} onChange={(e) => onSave(plans.map((x, k) => (k === i ? { ...x, then: e.target.value } : x)))} />
+              </div>
+            ) : (
+              <><b>{pl.when}</b> ← {pl.then}</>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
