@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Chat from "./chat";
 import { Tools, type Tool } from "./tools";
-import { ALL_QUESTIONS, REQUIRED, SECTIONS, type Phase } from "./data";
+import { ALL_QUESTIONS, SECTIONS, type Phase } from "./data";
 
 type Status = "" | "done" | "partial" | "none";
 type Day = {
@@ -17,7 +18,7 @@ type Day = {
   lesson: string;
   gratitude: [string, string, string];
 };
-type Store = { answers: Record<string, string>; completed: boolean; days: Record<string, Day> };
+type Store = { step?: number; answers: Record<string, string>; completed: boolean; days: Record<string, Day> };
 
 const KEY = "tico-shift:v1";
 const EMPTY: Store = { answers: {}, completed: false, days: {} };
@@ -73,43 +74,15 @@ export default function ShiftApp() {
 
 type P = { store: Store; update: (fn: (s: Store) => Store) => void };
 
-/* ---------- שלב א': אבחון ---------- */
+/* ---------- שלב א': אבחון בפורמט שיחה ---------- */
 function Onboarding({ store, update }: P) {
-  const [i, setI] = useState(0);
-  const q = ALL_QUESTIONS[i];
-  const section = SECTIONS.find((s) => s.questions.some((x) => x.id === q.id))!;
-  const first = section.questions[0].id === q.id;
-  const value = store.answers[q.id] ?? "";
-  const ok = !REQUIRED.has(q.id) || value.trim().length > 0;
-  const last = i === ALL_QUESTIONS.length - 1;
-  const set = (v: string) => update((s) => ({ ...s, answers: { ...s.answers, [q.id]: v } }));
-
   return (
-    <div className="space-y-5">
-      <div>
-        <div className="mb-2 flex justify-between text-sm text-muted">
-          <span>{section.title}</span><span>{i + 1}/{ALL_QUESTIONS.length}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-line"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${((i + 1) / ALL_QUESTIONS.length) * 100}%` }} /></div>
-      </div>
-      {first && <p className="rounded-xl bg-brand/10 p-4 text-sm leading-relaxed">{section.intro}</p>}
-      <div className={card}>
-        <h1 className="text-xl font-bold leading-snug">{q.label}</h1>
-        {q.hint && <p className="mt-1 text-sm text-muted">{q.hint}</p>}
-        {q.short ? (
-          <input key={q.id} className={`${field} mt-4`} value={value} placeholder={q.placeholder} onChange={(e) => set(e.target.value)} autoFocus />
-        ) : (
-          <textarea key={q.id} className={`${field} mt-4 min-h-36`} value={value} placeholder={q.placeholder} onChange={(e) => set(e.target.value)} autoFocus />
-        )}
-        {!ok && <p className="mt-2 text-sm text-accent">שדה חובה כדי להמשיך.</p>}
-      </div>
-      <div className="flex gap-3">
-        {i > 0 && <button className={ghost} onClick={() => setI(i - 1)}>הקודם</button>}
-        <button className={`${btn} flex-1`} disabled={!ok} onClick={() => (last ? update((s) => ({ ...s, completed: true })) : setI(i + 1))}>
-          {last ? "סיום ובניית הפרופיל" : "הבא"}
-        </button>
-      </div>
-    </div>
+    <Chat
+      answers={store.answers}
+      step={Math.min(store.step ?? 0, ALL_QUESTIONS.length - 1)}
+      onAnswer={(id, v, next) => update((s) => ({ ...s, answers: { ...s.answers, [id]: v }, step: Math.max(0, next) }))}
+      onFinish={() => update((s) => ({ ...s, completed: true }))}
+    />
   );
 }
 
