@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Tools, type Tool } from "./tools";
 import { ALL_QUESTIONS, REQUIRED, SECTIONS, type Phase } from "./data";
 
 type Status = "" | "done" | "partial" | "none";
@@ -12,6 +13,7 @@ type Day = {
   morningDone: boolean;
   anchorDone: boolean;
   identityNote: string;
+  closed?: boolean;
   lesson: string;
   gratitude: [string, string, string];
 };
@@ -30,9 +32,10 @@ const defaultPhase = (): Phase => { const h = new Date().getHours(); return h < 
 
 function calcStreak(days: Record<string, Day>) {
   const d = new Date();
-  if (!days[dateKey(d)]?.keyStatus) d.setDate(d.getDate() - 1); // היום עוד לא נסגר: לא שוברים רצף
+  const ok = (k: string) => !!days[k]?.keyStatus && !!days[k]?.morningDone;
+  if (!ok(dateKey(d))) d.setDate(d.getDate() - 1); // היום עוד לא נסגר: לא שוברים רצף
   let n = 0;
-  while (days[dateKey(d)]?.keyStatus) { n++; d.setDate(d.getDate() - 1); }
+  while (ok(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
   return n;
 }
 
@@ -112,7 +115,8 @@ function Onboarding({ store, update }: P) {
 
 /* ---------- האפליקציה היומית ---------- */
 function Main({ store, update }: P) {
-  const [tab, setTab] = useState<"today" | "profile">("today");
+  const [tab, setTab] = useState<"today" | "tools" | "profile">("today");
+  const [tool, setTool] = useState<Tool>("sos");
   const name = store.answers.name || "";
   const streak = calcStreak(store.days);
 
@@ -128,17 +132,19 @@ function Main({ store, update }: P) {
           <div className="text-xs text-muted">ימים ברצף</div>
         </div>
       </header>
-      <nav className="grid grid-cols-2 rounded-xl border border-line bg-surface p-1 text-sm font-medium">
-        {([["today", "היום"], ["profile", "הפרופיל שלי"]] as const).map(([k, l]) => (
+      <nav className="grid grid-cols-3 rounded-xl border border-line bg-surface p-1 text-sm font-medium">
+        {([["today", "היום"], ["tools", "כלים"], ["profile", "פרופיל"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={`rounded-lg py-2 ${tab === k ? "bg-brand text-white dark:text-black" : ""}`}>{l}</button>
         ))}
       </nav>
-      {tab === "today" ? <Today store={store} update={update} /> : <Profile store={store} update={update} />}
+      {tab === "today" && <Today store={store} update={update} onSos={() => { setTool("sos"); setTab("tools"); }} />}
+      {tab === "tools" && <Tools answers={store.answers} tool={tool} setTool={setTool} />}
+      {tab === "profile" && <Profile store={store} update={update} />}
     </div>
   );
 }
 
-function Today({ store, update }: P) {
+function Today({ store, update, onSos }: P & { onSos: () => void }) {
   const today = dateKey(new Date());
   const day = store.days[today] ?? emptyDay();
   const [phase, setPhase] = useState<Phase>(defaultPhase());
@@ -149,11 +155,12 @@ function Today({ store, update }: P) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2 text-sm">
-        {([["morning", "בוקר: כיול"], ["midday", "צהריים: פעולה"], ["evening", "ערב: בקרה"]] as const).map(([k, l]) => (
+        {([["morning", "בוקר: Test"], ["midday", "צהריים: Operate"], ["evening", "ערב: Test + Exit"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setPhase(k)} className={`rounded-xl border py-2 ${phase === k ? "border-brand bg-brand/10 font-semibold" : "border-line"}`}>{l}</button>
         ))}
       </div>
 
+      <button onClick={onSos} className="w-full rounded-xl border border-accent bg-accent/10 py-2 text-sm font-semibold">מוצף או דוחה? כפתור חירום</button>
       {day.keyAction && (
         <div className="rounded-xl bg-accent/15 p-4 text-sm"><b>פעולת המפתח להיום:</b> {day.keyAction}</div>
       )}
@@ -167,6 +174,7 @@ function Today({ store, update }: P) {
               <li><b>רואה:</b> {a.see || "—"}</li>
               <li><b>שומע:</b> {a.hear || "—"}</li>
               <li><b>מרגיש:</b> {a.feel || "—"}</li>
+              {a.smell && <li><b>ריח / טעם:</b> {a.smell}</li>}
             </ul>
             <Check checked={day.morningDone} onChange={(v) => patch({ morningDone: v })} label="עשיתי את הכיול" />
           </div>
@@ -228,6 +236,11 @@ function Today({ store, update }: P) {
                 onChange={(e) => { const g = [...day.gratitude] as Day["gratitude"]; g[n] = e.target.value; patch({ gratitude: g }); }} />
             ))}
           </div>
+          <div className={card}>
+            <h2 className="font-bold">3. סגירת יום מנטלית</h2>
+            <p className="mt-2 text-sm text-muted">שחרר שליטה. מה שלא נסגר היום ימשיך מחר. עכשיו זמן אישי ומשפחתי.</p>
+            <Check checked={!!day.closed} onChange={(v) => patch({ closed: v })} label="סגרתי את היום" />
+          </div>
           {day.keyStatus && <p className="text-center text-sm text-muted">היום נספר ברצף. עצם ההגעה לבקרת הערב היא חלק מהשינוי.</p>}
         </div>
       )}
@@ -281,6 +294,13 @@ function Profile({ store, update }: P) {
   const total = Object.keys(store.days).length;
   const done = useMemo(() => Object.values(store.days).filter((d) => d.keyStatus === "done").length, [store.days]);
 
+  const streak = calcStreak(store.days);
+  const avgEnergy = useMemo(() => {
+    const cut = new Date(); cut.setDate(cut.getDate() - 6);
+    const v = Object.entries(store.days).filter(([k, d]) => k >= dateKey(cut) && d.energy).map(([, d]) => d.energy);
+    return v.length ? (v.reduce((x, y) => x + y, 0) / v.length).toFixed(1) : "";
+  }, [store.days]);
+
   if (editing) return <Editor store={store} update={update} onClose={() => setEditing(false)} />;
 
   return (
@@ -295,7 +315,13 @@ function Profile({ store, update }: P) {
         <ul className="mt-1 list-disc ps-5">{[a.habit1, a.habit2, a.habit3].filter(Boolean).map((h) => <li key={h}>{h}</li>)}</ul>
         <p className="mt-4 text-sm text-muted">עוגן</p><p>{a.anchor || "—"}</p>
       </div>
-      <div className={`${card} text-sm`}>ימים שנסגרו: <b>{total}</b> · פעולת מפתח בוצעה במלואה: <b>{done}</b></div>
+      <div className={`${card} text-sm space-y-2`}>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div><div className="text-2xl font-bold">{streak}</div>רצף</div>
+          <div><div className="text-2xl font-bold">{total ? Math.round((done / total) * 100) : 0}%</div>ביצוע פעולת מפתח</div>
+          <div><div className="text-2xl font-bold">{avgEnergy || "—"}</div>אנרגיה, 7 ימים</div>
+        </div>
+      </div>
       <div className="flex gap-3">
         <button className={`${ghost} flex-1`} onClick={() => setEditing(true)}>עריכת תשובות</button>
         <button className={ghost} onClick={() => {
