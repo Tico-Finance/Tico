@@ -4,7 +4,7 @@ const hits = new Map<string, { n: number; t: number }>();
 const SYSTEM = `אתה מאמן NLP תומך בעברית, שמלווה אדם במילוי שאלון עומק לשינוי זהות והרגלים.
 כללים: ענה בעברית פשוטה, עד 4 משפטים. אל תענה במקום המשתמש על השאלה. אל תמציא טענות מדעיות ואל תציג את עצמך כתחליף לטיפול.
 כשמבקשים הסבר: הסבר בקצרה למה השאלה חשובה. כשמבקשים דוגמה: תן דוגמה אחת מעשית שאינה מתייחסת לפרטי המשתמש.
-כשהמשתמש שואל משהו לא קשור לשאלה, החזר אותו בעדינות אליה.`;
+כשיש הקשר שהמשתמש סיפר, התייחס אליו ואל מילותיו. כשהמשתמש שואל משהו לא קשור לשאלה, החזר אותו בעדינות אליה.`;
 
 export async function POST(req: Request) {
   const key = process.env.GEMINI_API_KEY;
@@ -16,10 +16,44 @@ export async function POST(req: Request) {
   if (h && now - h.t < 3_600_000) { if (++h.n > 40) return Response.json({ error: "rate" }, { status: 429 }); }
   else hits.set(ip, { n: 1, t: now });
 
-  let body: { kind?: string; question?: string; text?: string };
+  let body: { kind?: string; question?: string; text?: string; purpose?: string; answer?: string; context?: string; followups?: number };
   try { body = await req.json(); } catch { return Response.json({ error: "bad" }, { status: 400 }); }
   const question = String(body.question ?? "").slice(0, 400);
   const text = String(body.text ?? "").slice(0, 600);
+  const context = String(body.context ?? "").slice(0, 1500);
+
+  if (body.kind === "answer") {
+    const answer = String(body.answer ?? "").slice(0, 1200);
+    if (!question || !answer) return Response.json({ error: "bad" }, { status: 400 });
+    const used = Number(body.followups ?? 0);
+    const prompt = `מטרת השאלה: ${String(body.purpose ?? "").slice(0, 400)}
+השאלה: ${question}
+${context ? `מה שהמשתמש כבר סיפר:\n${context}\n` : ""}התשובה של המשתמש: ${answer}
+העמקות שכבר נשאלו: ${used}
+
+החזר JSON עם: reflect (משפט אחד שמשקף במילים שלך מה שהבנת מהתשובה, בלי לשבח יתר על המידה), enough (true אם התשובה מספיק ספציפית וחווייתית כדי להמשיך, אחרת false), followup (שאלת העמקה קצרה אחת בעברית שמתאימה לתשובה בפועל, או מחרוזת ריקה אם enough). אם התשובה מכילה הכללה, מחיקה או עיוות (תמיד, אף פעם, קשה מדי, זה אומר ש…), השתמש בשאלת מודל-העל. אם כבר נשאלו שתי העמקות, החזר enough=true.`;
+    const m = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
+    const rr = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.5, maxOutputTokens: 600, responseMimeType: "application/json",
+          responseSchema: { type: "OBJECT", properties: { reflect: { type: "STRING" }, enough: { type: "BOOLEAN" }, followup: { type: "STRING" } }, required: ["reflect", "enough", "followup"] },
+        },
+      }),
+    }).catch(() => null);
+    if (!rr || !rr.ok) return Response.json({ error: "upstream", status: rr?.status ?? 0 }, { status: 502 });
+    try {
+      const jj = await rr.json();
+      const raw = (jj.candidates?.[0]?.content?.parts ?? []).map((x: { text?: string }) => x.text ?? "").join("");
+      const o = JSON.parse(raw);
+      return Response.json({ reflect: String(o.reflect ?? ""), enough: !!o.enough || used >= 2, followup: String(o.followup ?? "") });
+    } catch { return Response.json({ error: "parse" }, { status: 502 }); }
+  }
+
   const ask = body.kind === "explain" ? "הסבר לי את השאלה." : body.kind === "example" ? "תן לי דוגמה." : text;
   if (!question || !ask) return Response.json({ error: "bad" }, { status: 400 });
 
@@ -29,7 +63,7 @@ export async function POST(req: Request) {
     headers: { "content-type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM }] },
-      contents: [{ role: "user", parts: [{ text: `השאלה בשאלון: ${question}\n\nהמשתמש: ${ask}` }] }],
+      contents: [{ role: "user", parts: [{ text: `${context ? `מה שהמשתמש כבר סיפר:\n${context}\n\n` : ""}השאלה בשאלון: ${question}\n\nהמשתמש: ${ask}` }] }],
       generationConfig: { temperature: 0.6, maxOutputTokens: 800 },
     }),
   }).catch(() => null);

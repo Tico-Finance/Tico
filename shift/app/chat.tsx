@@ -11,6 +11,9 @@ const chip = "rounded-full border border-line bg-surface px-3 py-1.5 text-sm dis
 export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
   const [extras, setExtras] = useState<Record<number, Msg[]>>({});
   const [pending, setPending] = useState<Record<number, string>>({});
+  const [after, setAfter] = useState<Record<number, string>>({});
+  const [multi, setMulti] = useState<Record<number, boolean>>({});
+  const [follow, setFollow] = useState<Record<number, number>>({});
   const [text, setText] = useState("");
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -22,13 +25,16 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
 
   const push = (i: number, ...m: Msg[]) => setExtras((e) => ({ ...e, [i]: [...(e[i] ?? []), ...m] }));
 
+  const ctx = () =>
+    ["goal", "identity", "story", "reframe"].filter((k) => answers[k]).map((k) => `${k}: ${answers[k]}`).join("\n");
+
   async function help(kind: "explain" | "example" | "ask", free?: string) {
     const label = kind === "explain" ? "הסבר לי" : kind === "example" ? "תן דוגמה" : free!;
     push(step, { from: "me", text: label });
     setBusy(true);
     let reply = "";
     try {
-      const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, question: q.label, text: free }) });
+      const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, question: q.label, text: free, context: ctx() }) });
       if (r.ok) reply = (await r.json()).text;
     } catch {}
     if (!reply) {
@@ -39,25 +45,48 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
     push(step, { from: "bot", text: reply });
   }
 
-  function commit(v: string) {
+  function commit(v: string, reflect?: string) {
+    if (reflect) setAfter((a) => ({ ...a, [step]: reflect }));
+    if (pending[step]) setMulti((m) => ({ ...m, [step]: true }));
     onAnswer(q.id, v, step + 1);
     setText("");
     if (last) onFinish();
   }
 
-  function send() {
+  async function send() {
     const v = text.trim();
     if (!v || busy) return;
     if (asking) { setText(""); setAsking(false); help("ask", v); return; }
-    const probe = HELP[q.id].probe;
     const prev = pending[step];
-    if (!q.short && probe && !prev && v.length < 30) {
+    const full = prev ? `${prev} ${v}` : v;
+    if (q.short) { commit(full); return; }
+
+    setBusy(true);
+    let res: { reflect: string; enough: boolean; followup: string } | null = null;
+    try {
+      const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "answer", question: q.label, purpose: HELP[q.id].explain, answer: full, context: ctx(), followups: follow[step] ?? 0 }) });
+      if (r.ok) res = await r.json();
+    } catch {}
+    setBusy(false);
+
+    if (res) {
+      if (res.enough || !res.followup) { commit(full, res.reflect); return; }
+      push(step, { from: "me", text: v }, { from: "bot", text: `${res.reflect}\n${res.followup}` });
+      setPending((p) => ({ ...p, [step]: full }));
+      setFollow((f) => ({ ...f, [step]: (f[step] ?? 0) + 1 }));
+      setText("");
+      return;
+    }
+    // גיבוי כשאין חיבור: העמקה קבועה לפי אורך
+    const probe = HELP[q.id].probe;
+    if (probe && !prev && v.length < 30) {
       push(step, { from: "me", text: v }, { from: "bot", text: probe + " (אפשר להרחיב, או ללחוץ \"זה מספיק\")" });
       setPending((p) => ({ ...p, [step]: v }));
       setText("");
       return;
     }
-    commit(prev ? `${prev} ${v}` : v);
+    commit(full);
   }
 
   return (
@@ -74,7 +103,8 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
               {sec && <p className="rounded-xl bg-brand/10 p-3 text-sm leading-relaxed"><b>{sec.title}.</b> {sec.intro}</p>}
               <Bubble from="bot">{qq.label}{qq.hint && <span className="mt-1 block text-sm text-muted">{qq.hint}</span>}</Bubble>
               {(extras[i] ?? []).map((m, k) => <Bubble key={k} from={m.from}>{m.text}</Bubble>)}
-              {i < step && <Bubble from="me">{answers[qq.id] || "(דילגתי)"}</Bubble>}
+              {i < step && !multi[i] && <Bubble from="me">{answers[qq.id] || "(דילגתי)"}</Bubble>}
+              {i < step && after[i] && <Bubble from="bot">{after[i]}</Bubble>}
             </div>
           );
         })}
