@@ -264,6 +264,20 @@ function Breath() {
 function Profile({ store, update }: P) {
   const a = store.answers;
   const [editing, setEditing] = useState(false);
+  const [polishing, setPolishing] = useState(false);
+  async function polish() {
+    const items = ALL_QUESTIONS.filter((q) => q.id !== "name" && store.answers[q.id]?.trim()).map((q) => ({ id: q.id, label: q.label, text: store.answers[q.id] }));
+    setPolishing(true);
+    try {
+      const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "polish", items }) });
+      if (!r.ok) throw new Error();
+      const { items: out } = (await r.json()) as { items: { id: string; text: string }[] };
+      const blank = out.filter((o) => !o.text.trim()).map((o) => ALL_QUESTIONS.find((q) => q.id === o.id)?.label.split(":")[0] ?? o.id);
+      update((st) => { const a = { ...st.answers }; for (const o of out) if (a[o.id] !== undefined) a[o.id] = o.text.trim(); return { ...st, answers: a }; });
+      alert(blank.length ? `התשובות נוקו. שאלות שדורשות ניסוח מחדש (לחץ "עריכת תשובות"):\n- ${blank.join("\n- ")}` : "התשובות נוקו ונוסחו מחדש. כדאי לעבור עליהן.");
+    } catch { alert("הליטוש לא זמין כרגע. נסה שוב בעוד רגע."); }
+    setPolishing(false);
+  }
   const total = Object.keys(store.days).length;
   const done = useMemo(() => Object.values(store.days).filter((d) => d.keyStatus === "done").length, [store.days]);
 
@@ -297,6 +311,7 @@ function Profile({ store, update }: P) {
       </div>
       <div className="flex gap-3">
         <button className={`${ghost} flex-1`} onClick={() => setEditing(true)}>עריכת תשובות</button>
+        <button className={ghost} disabled={polishing} onClick={polish}>{polishing ? "מלטש…" : "ליטוש"}</button>
         <button className={ghost} onClick={() => {
           const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
           const link = document.createElement("a");

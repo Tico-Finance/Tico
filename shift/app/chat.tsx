@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ALL_QUESTIONS, HELP, REQUIRED, SECTIONS } from "./data";
+import { ALL_QUESTIONS, FILLER, FORMAT, HELP, REQUIRED, SECTIONS } from "./data";
 
 type Msg = { from: "bot" | "me"; text: string };
 type Props = { answers: Record<string, string>; step: number; onAnswer: (id: string, v: string, next: number) => void; onFinish: () => void };
@@ -13,6 +13,7 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
   const [pending, setPending] = useState<Record<number, string>>({});
   const [after, setAfter] = useState<Record<number, string>>({});
   const [multi, setMulti] = useState<Record<number, boolean>>({});
+  const [cleanP, setCleanP] = useState<Record<number, string>>({});
   const [follow, setFollow] = useState<Record<number, number>>({});
   const [text, setText] = useState("");
   const [asking, setAsking] = useState(false);
@@ -59,20 +60,27 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
     if (asking) { setText(""); setAsking(false); help("ask", v); return; }
     const prev = pending[step];
     const full = prev ? `${prev} ${v}` : v;
-    if (q.short) { commit(full); return; }
+    if (q.short) { commit(full.replace(FILLER, "").replace(FILLER, "").trim()); return; }
 
     setBusy(true);
-    let res: { reflect: string; enough: boolean; followup: string } | null = null;
+    let res: { intent: string; reply: string; clean: string; reflect: string; enough: boolean; followup: string } | null = null;
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "answer", question: q.label, purpose: HELP[q.id].explain, answer: full, context: ctx(), followups: follow[step] ?? 0 }) });
+        body: JSON.stringify({ kind: "answer", question: q.label, purpose: HELP[q.id].explain, format: FORMAT[q.id], answer: full, context: ctx(), followups: follow[step] ?? 0 }) });
       if (r.ok) res = await r.json();
     } catch {}
     setBusy(false);
 
     if (res) {
-      if (res.enough || !res.followup) { commit(full, res.reflect); return; }
+      if (res.intent === "question") { // שאלה למאמן, לא תשובה: לא שומרים
+        push(step, { from: "me", text: v }, { from: "bot", text: res.reply || "שאלה טובה. חזור לשאלה כשתרגיש מוכן לענות." });
+        setText("");
+        return;
+      }
+      const final = res.clean.trim() || full;
+      if (res.enough || !res.followup) { commit(final, res.reflect); return; }
       push(step, { from: "me", text: v }, { from: "bot", text: `${res.reflect}\n${res.followup}` });
+      setCleanP((c) => ({ ...c, [step]: final }));
       setPending((p) => ({ ...p, [step]: full }));
       setFollow((f) => ({ ...f, [step]: (f[step] ?? 0) + 1 }));
       setText("");
@@ -116,7 +124,7 @@ export default function Chat({ answers, step, onAnswer, onFinish }: Props) {
           <button className={chip} disabled={busy} onClick={() => help("explain")}>הסבר לי</button>
           <button className={chip} disabled={busy} onClick={() => help("example")}>תן דוגמה</button>
           <button className={`${chip} ${asking ? "border-brand font-semibold" : ""}`} onClick={() => setAsking(!asking)}>שאל שאלה</button>
-          {pending[step] && <button className={chip} onClick={() => commit(pending[step])}>זה מספיק</button>}
+          {pending[step] && <button className={chip} onClick={() => commit(cleanP[step] || pending[step])}>זה מספיק</button>}
           {!REQUIRED.has(q.id) && !pending[step] && <button className={chip} onClick={() => commit("")}>דלג</button>}
           {step > 0 && <button className={chip} onClick={() => onAnswer(ALL_QUESTIONS[step - 1].id, answers[ALL_QUESTIONS[step - 1].id] ?? "", step - 1)}>חזור</button>}
         </div>
