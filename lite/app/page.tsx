@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { BROKER_PCT, LAWYER_PCT, OTHER_FIXED, VAT } from "./costs-config";
 import { calc, DEAL_LABELS, DEAL_UI_LABELS, LINKED, LTV, PTI, TERMS, UNLINKED, type DealType } from "./calc";
 import {
   CONSENT_CONTACT_TEXT, CONSENT_MARKETING_TEXT, CONTACT_PHONE_DISPLAY, WA_NUMBER,
@@ -39,7 +40,7 @@ function Table({ r }: { r: R }) {
   return (
     <div>
       <h3 className="mb-1 text-sm font-bold">טבלת יכולת מימון - לפי תמהיל ותקופת ההלוואה</h3>
-      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">כל הסכומים ב-₪. בכל תא: למעלה, מודגש, ההחזר החודשי. מתחתיו, בקטן, סכום המשכנתה המקסימלית. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלכם.</p>
+      <p className="mb-2 text-[11px] text-[#1A1A2E]/60">כל הסכומים ב-₪. בכל תא: למעלה, מודגש, ההחזר החודשי. מתחתיו, בקטן, סכום המשכנתה המקסימלית. שווי הנכס שאפשר לרכוש = סכום המשכנתה + ההון העצמי שלכם פחות ההוצאות הנלוות.</p>
       <table className="w-full table-fixed border-collapse text-center text-[10px]">
         <thead>
           <tr className="bg-[#2E8B57]/10">
@@ -75,7 +76,10 @@ function Assumptions() {
         </li>
         <li>שיעור החזר מקסימלי: {PTI * 100}% מההכנסה הפנויה (הכנסה נטו פחות התחייבויות חודשיות).</li>
         <li>ריביות לדוגמה: {LINKED}% במסלול צמוד מדד, {UNLINKED}% במסלול לא צמוד מדד. תקופה עד 30 שנה.</li>
-        <li>החישוב לא כולל הוצאות נלוות לרכישה (מס רכישה, עורך דין, תיווך ועוד).</li>
+        <li>
+          הוצאות נלוות שמנוכות מההון העצמי: תיווך {BROKER_PCT * 100}% ועורך דין {LAWYER_PCT * 100}% מהמחיר, ועוד {nf.format(OTHER_FIXED)} ₪ להוצאות אחרות (אגרות רישום, שמאות, פתיחת תיק, ייעוץ משכנתאות), כולם בתוספת מע״מ ({VAT * 100}%), ומס רכישה לפי סוג הנכס.
+          בהחלפת דירה, מס הרכישה מחושב בהנחה שהדירה הנוכחית תימכר בתוך 18 חודשים. ההוצאות בפועל עשויות להיות שונות.
+        </li>
         <li>התוצאה אינה אישור עקרוני מבנק ואינה מחליפה אותו.</li>
       </ul>
     </details>
@@ -205,13 +209,18 @@ export default function Page() {
               <div className="text-3xl font-extrabold text-[#2E8B57]">{ils(r.best.price)}</div>
               <div className="text-xs text-[#1A1A2E]/70">עם משכנתה של עד {ils(r.best.mortgage)}</div>
             </div>
+            <p className="text-sm">
+              <strong>בצד להוצאות נלוות: כ-{ils(Math.round(r.best.costs / 1000) * 1000)}.</strong>{" "}
+              ההוצאות (מס רכישה, עורך דין, תיווך ועוד) יוצאות מההון העצמי ולא כלולות במשכנתה, ולכן הן כבר מנוכות מהחישוב. זו הערכה בלבד.
+            </p>
             <p className="rounded-lg border border-[#B8860B]/40 bg-[#B8860B]/10 p-3 text-xs font-semibold text-[#7a5a08]">
               זו הערכה בלבד. אין בה המלצה או ייעוץ פרטני לאף מקרה, והיא אינה התחייבות לאישור אשראי. התוצאה בפועל תלויה בבנק, בדוח האשראי ובבדיקה מלאה.
             </p>
-            <p className="text-xs text-[#1A1A2E]/60">
-              {r.limitedBy === "income"
-                ? "הסכום מוגבל על ידי יכולת ההחזר מההכנסה."
-                : `הסכום מוגבל על ידי אחוז המימון המותר (${r.ltvPercent}%) ביחס להון העצמי.`}
+            <p className="rounded-lg bg-[#F5FAF7] p-3 text-sm">
+              <strong>מה חסר כדי לקבל יותר: </strong>
+              {r.limitedBy === "equity"
+                ? `ההון העצמי הוא המגבלה. כל ${ils(r.extra.equity)} הון נוספים מוסיפים כ-${ils(Math.round(r.extra.gainPerExtraEquity / 1000) * 1000)} לשווי הנכס.`
+                : `ההכנסה היא המגבלה. כל ${ils(r.extra.income)} הכנסה נטו נוספים בחודש מוסיפים כ-${ils(Math.round(r.extra.gainPerExtraIncome / 1000) * 1000)} לשווי הנכס.`}
             </p>
             <Table r={r} />
 
