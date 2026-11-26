@@ -86,7 +86,7 @@ export default function Page() {
   const [f, setF] = useState({
     name: "", phone: "", email: "", income: "", obligations: "",
     equity: "", deal: "first" as DealType,
-    consentContact: false, consentMarketing: false, website: "",
+    consent: false, website: "",
   });
   const [stage, setStage] = useState<"form" | "result">("form");
   const [err, setErr] = useState("");
@@ -112,7 +112,7 @@ export default function Page() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return setErr("כתובת המייל לא נראית תקינה");
     if (input.income <= 0) return setErr("נא להזין הכנסה חודשית נטו");
     if (input.equity <= 0) return setErr("נא להזין הון עצמי");
-    if (!f.consentContact) return setErr("כדי לקבל את התוצאה צריך לאשר יצירת קשר");
+    if (!f.consent) return setErr("כדי לקבל את התוצאה צריך לאשר את התיבה בתחתית הטופס");
     setBusy(true);
     const a = getAttribution();
     try {
@@ -121,7 +121,7 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: f.name, phone: f.phone, email: f.email.trim(), website: f.website,
-          consentContact: true, consentMarketing: f.consentMarketing,
+          consentContact: true, consentMarketing: true,
           income: input.income, obligations: input.obligations, equity: input.equity,
           deal: DEAL_LABELS[f.deal], maxMortgage: Math.round(r.best.mortgage),
           maxPrice: Math.round(r.best.price), monthlyPayment: Math.round(r.best.payment),
@@ -184,15 +184,11 @@ export default function Page() {
             <input tabIndex={-1} autoComplete="off" aria-hidden className="hidden" value={f.website} onChange={(e) => set("website", e.target.value)} />
 
             <label className="flex items-start gap-2 text-xs text-[#1A1A2E]/80">
-              <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0" checked={f.consentContact} onChange={(e) => set("consentContact", e.target.checked)} />
+              <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} />
               <span>
-                {CONSENT_CONTACT_TEXT.replace("קראתי את מדיניות הפרטיות ואת תנאי השימוש.", "")}
+                {CONSENT_CONTACT_TEXT} {CONSENT_MARKETING_TEXT}{" "}
                 קראתי את <Link href="/privacy" target="_blank" className="underline">מדיניות הפרטיות</Link> ואת <Link href="/terms" target="_blank" className="underline">תנאי השימוש</Link>.
               </span>
-            </label>
-            <label className="flex items-start gap-2 text-xs text-[#1A1A2E]/80">
-              <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0" checked={f.consentMarketing} onChange={(e) => set("consentMarketing", e.target.checked)} />
-              <span>{CONSENT_MARKETING_TEXT}</span>
             </label>
 
             <p className="text-xs text-[#1A1A2E]/60">התוצאה היא הערכה בלבד ואינה המלצה או ייעוץ פרטני לאף מקרה.</p>
