@@ -75,6 +75,8 @@ function doPost(e) {
 4. ב-Vercel, בפרויקט `tico-lite`, הוסיפו משתנה `EVENTS_ENABLED` = `1`, ואחריו Redeploy.
 
 ## משתני סביבה נוספים (Vercel, Redeploy אחרי כל שינוי)
-- `NEXT_PUBLIC_BOOKING_URL`: קישור לתשלום וקביעת מועד לפגישת האסטרטגיה. כל עוד אין, כפתור הפגישה פותח וואטסאפ אליכם עם הודעה מוכנה.
+- `NEXT_PUBLIC_PAYMENT_URL`: קישור התשלום מחברת הסליקה. כל עוד אין, כפתור הפגישה פותח וואטסאפ אליכם עם הודעה מוכנה.
+- `CALENDAR_URL` (בלי NEXT_PUBLIC, נשאר בשרת): קישור עמוד קביעת הפגישות ביומן Google. מוצג רק ב-`/thanks` אחרי תשלום.
+- `THANKS_TOKEN` (בלי NEXT_PUBLIC): סוד ארוך. כתובת ההחזרה בחברת הסליקה: `https://tico-lite.vercel.app/thanks?t=<THANKS_TOKEN>`.
 - `NEXT_PUBLIC_COMMUNITY_URL`: קישור הזמנה לקהילת הוואטסאפ. כל עוד אין, הכפתור לא מוצג.
 - `NEXT_PUBLIC_MEETING_CREDIT` = `1`: להציג שהסכום מקוזז מדמי הטיפול (רק אחרי שהוחלט).

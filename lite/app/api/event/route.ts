@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const ALLOWED = new Set([
   "page_view", "form_start", "form_submit", "result_view",
-  "click_meeting", "click_community", "click_whatsapp",
+  "click_meeting", "click_community", "click_whatsapp", "thanks_view", "click_booking",
 ]);
 const clip = (v: unknown, n = 120) => String(v ?? "").slice(0, n);
 
