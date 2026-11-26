@@ -8,10 +8,10 @@ import {
 import { getAttribution, track } from "./track";
 
 // קישורים שצ'יקו מספק (מוגדרים ב-Vercel כמשתני סביבה, ודורשים Redeploy):
-// NEXT_PUBLIC_BOOKING_URL: תשלום + קביעת מועד לפגישת האסטרטגיה
+// NEXT_PUBLIC_PAYMENT_URL: קישור לתשלום מחברת הסליקה (אחרי התשלום חוזרים ל-/thanks ובוחרים מועד)
 // NEXT_PUBLIC_COMMUNITY_URL: קישור הזמנה לקהילת הוואטסאפ
 // NEXT_PUBLIC_MEETING_CREDIT=1: להציג שהסכום מקוזז מדמי הטיפול (רק אחרי שהוחלט)
-const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL ?? "";
+const PAYMENT_URL = process.env.NEXT_PUBLIC_PAYMENT_URL ?? "";
 const COMMUNITY_URL = process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "";
 const MEETING_CREDIT = process.env.NEXT_PUBLIC_MEETING_CREDIT === "1";
 
@@ -144,7 +144,7 @@ export default function Page() {
     `הון עצמי: ${ils(input.equity)}\nהכנסה נטו: ${ils(input.income)} | התחייבויות: ${ils(input.obligations)}\n` +
     `שווי נכס מקסימלי (הערכה): עד ${ils(r.best.price)}\nאשמח לדבר.`
   );
-  const meetingLink = BOOKING_URL || waLink(`היי צ'יקו, אני ${f.name}. ראיתי את התוצאה באתר ואני רוצה לקבוע פגישת אסטרטגיה.`);
+  const meetingLink = PAYMENT_URL || waLink(`היי צ'יקו, אני ${f.name}. ראיתי את התוצאה באתר ואני רוצה לקבוע פגישת אסטרטגיה.`);
 
   return (
     <div className="flex flex-1 justify-center bg-[#F5FAF7] px-4 py-8 text-[#1A1A2E]">
@@ -223,6 +223,7 @@ export default function Page() {
               <p className="text-xs text-[#1A1A2E]/70">
                 עלות הפגישה: 350 ₪ + מע״מ.{MEETING_CREDIT ? " הסכום יקוזז מדמי הטיפול אם נמשיך יחד." : ""}
               </p>
+              <p className="text-xs text-[#1A1A2E]/70">{PAYMENT_URL ? "קודם התשלום, ומיד אחריו בוחרים מועד." : "נתאם איתכם את הפרטים בוואטסאפ."}</p>
               <a
                 href={meetingLink}
                 onClick={() => track("click_meeting")}
