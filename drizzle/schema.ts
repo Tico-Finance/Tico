@@ -190,6 +190,9 @@ export const subscribers = pgTable("subscribers", {
   // Proof of opt-in for marketing email: when, and the exact wording shown.
   consentAt: timestamp("consent_at", { withTimezone: true }),
   consentText: text("consent_text"),
+  // Why the person left (optional, from the unsubscribe page).
+  unsubscribeReasons: text("unsubscribe_reasons").array(),
+  unsubscribeNote: text("unsubscribe_note"),
 });
 
 export const emailSends = pgTable("email_sends", {

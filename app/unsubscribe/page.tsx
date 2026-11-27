@@ -1,4 +1,4 @@
-import ConfirmButton from "./confirm-button";
+import UnsubscribeForm from "./unsubscribe-form";
 
 export default async function UnsubscribePage({
   searchParams,
@@ -14,7 +14,7 @@ export default async function UnsubscribePage({
           הסרה מרשימת התפוצה
         </h1>
         {token ? (
-          <ConfirmButton token={token} />
+          <UnsubscribeForm token={token} />
         ) : (
           <p className="text-button">קישור לא תקין - חסר טוקן.</p>
         )}
