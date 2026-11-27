@@ -25,6 +25,7 @@ export default function ReportRequest({
   const [website, setWebsite] = useState(""); // honeypot
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
+  const [emailSent, setEmailSent] = useState(true);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -36,12 +37,29 @@ export default function ReportRequest({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, email, consent, website, input }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        emailSent?: boolean;
+        filename?: string;
+        pdfBase64?: string;
+      };
       if (!res.ok) {
         setError(data.error || "משהו השתבש, נסו שוב.");
         setStatus("error");
         return;
       }
+      if (data.pdfBase64) {
+        const bytes = Uint8Array.from(atob(data.pdfBase64), (c) => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || "report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      }
+      setEmailSent(data.emailSent !== false);
       setStatus("sent");
     } catch {
       setError("אין חיבור לשרת, נסו שוב.");
@@ -59,14 +77,16 @@ export default function ReportRequest({
           דוח PDF מסודר + קופון {COUPON_DISCOUNT_PERCENT}% הנחה
         </h2>
         <p className="text-sm text-foreground/70">
-          נשלח למייל דוח עם כל החישובים לפי הנתונים שהזנתם, וקישור לקופון הנחה
-          של {COUPON_DISCOUNT_PERCENT}% על שירות ליווי מלא.
+          מקבלים מיד דוח עם כל החישובים לפי הנתונים שהזנתם, ובנוסף נשלח למייל
+          עותק של הדוח וקופון הנחה של {COUPON_DISCOUNT_PERCENT}% על שירות ליווי מלא.
         </p>
       </div>
 
       {status === "sent" ? (
         <p className="rounded-xl bg-white px-4 py-3 text-sm text-foreground/80" role="status">
-          הדוח נשלח אל {email}. כדאי לבדוק גם בתיקיית הספאם / קידומי מכירות.
+          {emailSent
+            ? `הדוח ירד למכשיר, ועותק שלו נשלח אל ${email} יחד עם קופון ההנחה. כדאי לבדוק גם בתיקיית הספאם / קידומי מכירות.`
+            : "הדוח ירד למכשיר. לא הצלחנו לשלוח את המייל עם הקופון כרגע, ניצור איתך קשר."}
         </p>
       ) : !open ? (
         <div>
@@ -76,7 +96,7 @@ export default function ReportRequest({
             disabled={!ready}
             className="rounded-full bg-button px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            שלחו לי את הדוח למייל
+            קבלו את הדוח והקופון
           </button>
           {!ready && (
             <p className="mt-2 text-xs text-foreground/60">
@@ -161,7 +181,7 @@ export default function ReportRequest({
               disabled={status === "sending"}
               className="rounded-full bg-button px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {status === "sending" ? "שולח..." : "שלחו לי את הדוח"}
+              {status === "sending" ? "מפיק..." : "קבלו את הדוח והקופון"}
             </button>
             <button
               type="button"
