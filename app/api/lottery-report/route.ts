@@ -272,7 +272,7 @@ export async function POST(req: NextRequest) {
 
     await sendSingleEmail({
       to: email,
-      subject: "הדוח שלך מהמחשבון + קופון 20% הנחה",
+      subject: "הדוח שלך מהמחשבון, ומחכה לך הפתעה",
       html,
       text,
       attachments: [{ filename: "tico-finance-report.pdf", content: pdf }],

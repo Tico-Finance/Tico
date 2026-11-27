@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import type { LotteryInput } from "@/lib/lottery-calc";
 import {
-  COUPON_DISCOUNT_PERCENT,
   MARKETING_CONSENT_TEXT,
   REQUIRE_MARKETING_CONSENT,
 } from "@/lib/calculator-lead";
@@ -56,11 +55,11 @@ export default function ReportRequest({
     <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-accent/30 p-6 shadow-sm">
       <div>
         <h2 className="text-lg font-semibold text-primary">
-          דוח PDF מסודר + קופון {COUPON_DISCOUNT_PERCENT}% הנחה
+          דוח PDF מסודר, ובנוסף הפתעה מאיתנו
         </h2>
         <p className="text-sm text-foreground/70">
-          נשלח למייל דוח עם כל החישובים לפי הנתונים שהזנתם, וקישור לקופון הנחה
-          של {COUPON_DISCOUNT_PERCENT}% על שירות ליווי מלא.
+          נשלח למייל דוח עם כל החישובים לפי הנתונים שהזנתם, ובנוסף תקבלו הפתעה
+          מאיתנו.
         </p>
       </div>
 
