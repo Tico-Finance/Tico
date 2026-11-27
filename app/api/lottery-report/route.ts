@@ -17,7 +17,7 @@ import { sendSingleEmail, unsubscribeLink } from "@/lib/resend";
 import { generateUnsubscribeToken, isValidEmail } from "@/lib/subscribers";
 
 // הורדת דוח PDF מהמחשבון הציבורי: שומר ליד, מנפיק קופון ממוספר, ושולח את הדוח
-// במייל, ומחזיר אותו גם להורדה מיידית. הקופון נשלח רק במייל. הדוח נבנה מחישוב שרת.
+// במייל בלבד (כך שהמייל חייב להיות אמיתי). הדוח נבנה מחישוב שרת.
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -237,19 +237,8 @@ export async function POST(req: NextRequest) {
     expiresAt: coupon.expiresAt,
   };
 
-  let pdf: Buffer;
   try {
-    pdf = await renderReportPdf({ name, input, rows, coupon: couponInfo });
-  } catch (err) {
-    console.error("lottery-report: failed to build the PDF", err);
-    return NextResponse.json(
-      { error: "לא הצלחנו להפיק את הדוח כרגע. הפרטים נשמרו ונחזור אליך." },
-      { status: 502 }
-    );
-  }
-
-  let emailSent = true;
-  try {
+    const pdf = await renderReportPdf({ name, input, rows, coupon: couponInfo });
     const safeName = escapeHtml(name);
     const couponNumber = String(coupon.number).padStart(4, "0");
     const expires = coupon.expiresAt.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
@@ -289,16 +278,13 @@ export async function POST(req: NextRequest) {
       attachments: [{ filename: "tico-finance-report.pdf", content: pdf }],
     });
   } catch (err) {
-    // הליד כבר נשמר והדוח מוכן, לכן הלקוח עדיין מקבל את ההורדה.
-    console.error("lottery-report: failed to send the email", err);
-    emailSent = false;
+    // הליד כבר נשמר, כך שהפרטים לא הולכים לאיבוד.
+    console.error("lottery-report: failed to build or send the report", err);
+    return NextResponse.json(
+      { error: "לא הצלחנו לשלוח את המייל כרגע. הפרטים נשמרו ונחזור אליך." },
+      { status: 502 }
+    );
   }
 
-  // הורדה מיידית במקום, בנוסף לעותק במייל (הקופון נשלח רק במייל).
-  return NextResponse.json({
-    ok: true,
-    emailSent,
-    filename: "tico-finance-report.pdf",
-    pdfBase64: pdf.toString("base64"),
-  });
+  return NextResponse.json({ ok: true });
 }
