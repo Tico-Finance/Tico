@@ -111,6 +111,8 @@ const MECHIR_PRICE_CAP = 2_100_000;
 const MECHIR_LTV = 0.75;
 const MECHIR_MIN_EQUITY_WITH_GRANT = 60_000;
 const MECHIR_MIN_EQUITY_NO_GRANT = 100_000;
+// חניה נרכשת בנפרד ונוספת ישירות למחיר החוזה (כולל מע״מ) - זהה למחשבון ההגרלות.
+const MECHIR_PARKING_PRICE = 70_000;
 const MECHIR_GRANT_OPTIONS = [
   { value: 0, label: "אין מענק (0 ₪)" },
   { value: 40_000, label: "40,000 ₪" },
@@ -224,6 +226,7 @@ export default function IntakeTool() {
     useState<number>(25);
   const [mechirDiscountCap, setMechirDiscountCap] = useState<number>(500_000);
   const [mechirGrant, setMechirGrant] = useState<number>(0);
+  const [mechirParkingCount, setMechirParkingCount] = useState<number>(1);
   const [newPropertyLocation, setNewPropertyLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [propertyRegistration, setPropertyRegistration] = useState("");
@@ -272,7 +275,7 @@ export default function IntakeTool() {
       hasExistingProperty, existingPropertyValue, existingMortgageBalance,
       existingPropertyLocation, propertyValue, isMechirLamishtaken,
       mechirMarketValue, mechirDiscountPercent, mechirDiscountCap, mechirGrant,
-      newPropertyLocation, propertyType, propertyRegistration, liquidEquity,
+      mechirParkingCount, newPropertyLocation, propertyType, propertyRegistration, liquidEquity,
       useManualFinancingPercent, manualFinancingPercent, lawyerFee, brokerFee,
       purchaseTax, mortgageAdvisoryFee, otherFees, notes,
     };
@@ -294,6 +297,7 @@ export default function IntakeTool() {
     setMechirDiscountPercent(g("mechirDiscountPercent", 25));
     setMechirDiscountCap(g("mechirDiscountCap", 500_000));
     setMechirGrant(g("mechirGrant", 0));
+    setMechirParkingCount(g("mechirParkingCount", 0));
     setNewPropertyLocation(g("newPropertyLocation", ""));
     setPropertyType(g("propertyType", ""));
     setPropertyRegistration(g("propertyRegistration", ""));
@@ -393,8 +397,13 @@ export default function IntakeTool() {
         mechirMarketValue
       )
     : 0;
+  // חניות: נוספות ישירות למחיר החוזה, לא כלולות בשווי השוק לצורך ההנחה והמשכנתה.
+  const mechirParkingCost =
+    isMechirLamishtaken && mechirMarketValue > 0
+      ? Math.max(mechirParkingCount, 0) * MECHIR_PARKING_PRICE
+      : 0;
   const mechirContractPrice = isMechirLamishtaken
-    ? Math.max(mechirMarketValue - mechirDiscount, 0)
+    ? Math.max(mechirMarketValue - mechirDiscount, 0) + mechirParkingCost
     : 0;
   const effectivePropertyValue = isMechirLamishtaken
     ? mechirContractPrice
@@ -627,6 +636,7 @@ export default function IntakeTool() {
             ? ([
                 ["שווי שוק (לפני הנחה) (₪)", mechirMarketValue],
                 ["הנחה (₪)", Math.round(mechirDiscount)],
+                ["חניות (₪)", Math.round(mechirParkingCost)],
                 ["מחיר חוזה (₪)", Math.round(mechirContractPrice)],
                 ["מענק מקום (₪)", mechirGrant],
               ] as (string | number)[][])
@@ -852,6 +862,16 @@ export default function IntakeTool() {
                   min={0}
                 />
               </Field>
+              <Field
+                label="מספר חניות"
+                suffix={`× ${currency.format(MECHIR_PARKING_PRICE)} ₪`}
+              >
+                <NumberInput
+                  value={mechirParkingCount}
+                  onChange={setMechirParkingCount}
+                  min={0}
+                />
+              </Field>
             </div>
             <div className="flex flex-col gap-2">
               <span className="text-sm font-medium text-foreground/80">
@@ -877,6 +897,9 @@ export default function IntakeTool() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <ResultCard label="הנחה בפועל" value={mechirDiscount} />
+              {mechirParkingCost > 0 && (
+                <ResultCard label="חניות (נוספות למחיר החוזה)" value={mechirParkingCost} />
+              )}
               <ResultCard
                 label="מחיר חוזה (שווי הנכס בפועל)"
                 value={mechirContractPrice}
@@ -1655,7 +1678,7 @@ export default function IntakeTool() {
               {isMechirLamishtaken && (
                 <div
                   className="tico-report-grid"
-                  style={{ "--tico-report-cols": 3, marginTop: 10 } as CSSProperties}
+                  style={{ "--tico-report-cols": mechirParkingCost > 0 ? 4 : 3, marginTop: 10 } as CSSProperties}
                 >
                   <div className="tico-report-card">
                     <div className="tico-report-card-k">שווי שוק (לפני הנחה)</div>
@@ -1669,6 +1692,14 @@ export default function IntakeTool() {
                       {currency.format(mechirDiscount)} ₪
                     </div>
                   </div>
+                  {mechirParkingCost > 0 && (
+                    <div className="tico-report-card">
+                      <div className="tico-report-card-k">חניות (נוספות למחיר החוזה)</div>
+                      <div className="tico-report-card-v">
+                        {currency.format(mechirParkingCost)} ₪
+                      </div>
+                    </div>
+                  )}
                   <div className="tico-report-card">
                     <div className="tico-report-card-k">מענק מקום</div>
                     <div className="tico-report-card-v">
