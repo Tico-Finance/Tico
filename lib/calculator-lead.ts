@@ -5,7 +5,7 @@ export const REQUIRE_MARKETING_CONSENT = true;
 
 // הנוסח המדויק שמוצג ללקוח - נשמר יחד עם תאריך ההסכמה כהוכחה.
 export const MARKETING_CONSENT_TEXT =
-  "אני מאשר/ת לקבל מ-TICO FINANCE תכנים, טיפים ועדכונים על משכנתאות ודיור בדואר אלקטרוני. אפשר להסיר בכל עת.";
+  "אני מאשר/ת קבלת דיוור מ-TICO FINANCE בדואר אלקטרוני: תכנים, טיפים ועדכונים על משכנתאות ודיור. אפשר להסיר בכל עת.";
 
 export const COUPON_DISCOUNT_PERCENT = 20;
 export const COUPON_VALID_DAYS = 60;
