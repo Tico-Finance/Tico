@@ -77,7 +77,7 @@ const escapeHtml = (s: string) =>
 
 const nf = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 });
 
-export async function POST(req: NextRequest) {
+async function handle(req: NextRequest) {
   let json: unknown;
   try {
     json = await req.json();
@@ -285,4 +285,28 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+// המחשבון באתר הציבורי (ticofinance.co.il) קורא לנתיב הזה מדומיין אחר, ולכן דרוש CORS.
+// רק הדומיינים של האתר מורשים; בקשות מהאפליקציה עצמה (אותו דומיין) לא צריכות את זה.
+const ALLOWED_ORIGINS = ["https://ticofinance.co.il", "https://www.ticofinance.co.il"];
+
+function withCors(req: NextRequest, res: NextResponse) {
+  const origin = req.headers.get("origin");
+  res.headers.append("Vary", "Origin");
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin);
+    res.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.headers.set("Access-Control-Allow-Headers", "Content-Type");
+    res.headers.set("Access-Control-Max-Age", "86400");
+  }
+  return res;
+}
+
+export async function POST(req: NextRequest) {
+  return withCors(req, await handle(req));
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return withCors(req, new NextResponse(null, { status: 204 }));
 }
