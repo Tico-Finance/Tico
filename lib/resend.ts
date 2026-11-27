@@ -131,3 +131,33 @@ export async function sendApprovedDraftEmail(draftEmailId: string) {
 
   return { recipients: sentCount };
 }
+
+/** שליחת מייל בודד (לא דיוור) - למשל דוח עם קובץ מצורף. */
+export async function sendSingleEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  attachments?: { filename: string; content: Buffer }[];
+}) {
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!from) {
+    throw new Error(
+      "RESEND_FROM_EMAIL is not set. Add it to your environment (see SETUP.md)."
+    );
+  }
+  const { data, error } = await getClient().emails.send({
+    from,
+    to: opts.to,
+    subject: opts.subject,
+    html: opts.html,
+    text: opts.text,
+    attachments: opts.attachments,
+  });
+  if (error) throw new Error(error.message);
+  return data?.id ?? null;
+}
+
+export function unsubscribeLink(token: string) {
+  return unsubscribeUrl(token);
+}

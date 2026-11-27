@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // הגופן והלוגו נקראים מהדיסק בזמן יצירת ה-PDF, ולכן חייבים להיכלל בפונקציות.
+  outputFileTracingIncludes: {
+    "/api/lottery-report": ["./assets/fonts/**/*", "./assets/logo/**/*"],
+    "/api/coupon/[token]": ["./assets/fonts/**/*", "./assets/logo/**/*"],
+  },
   async headers() {
     return [
       {
