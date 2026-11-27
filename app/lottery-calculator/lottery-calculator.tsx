@@ -2,46 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
-
-type ApartmentSize = {
-  id: number;
-  label: string;
-  mainSqm: number;
-};
-
-const DEFAULT_SIZES: ApartmentSize[] = [
-  { id: 1, label: "3 חדרים", mainSqm: 84 },
-  { id: 2, label: "4 חדרים", mainSqm: 100 },
-  { id: 3, label: "5 חדרים", mainSqm: 115 },
-  { id: 4, label: "6 חדרים", mainSqm: 125 },
-];
-
-// הנחות קבועות של המחשבון - לא משתנות בין הגרלות, ולכן לא ניתנות לעריכה.
-// גודל המרפסת/המחסן ומספר החניות כן משתנים בין הגרלות ומוזנים על ידי
-// המשתמש - רק אופן החישוב שלהם (המכפיל ממחיר המ״ר, מחיר חניה) קבוע.
-const VAT_PERCENT = 18;
-const BALCONY_FACTOR = 0.5;
-const STORAGE_FACTOR = 0.25;
-const PARKING_PRICE = 70000; // ₪ לחניה, כולל מע״מ - נוסף ישירות למחיר הכולל מע״מ
-
-// כללי המימון של מחיר למשתכן (הוראת ניהול בנקאי תקין 329, סעיף 4א):
-// אם שווי השוק (המחיר לפני הנחה) עולה על 2.1 מיליון ₪, שווי הנכס לצורך
-// המשכנתה הוא הגבוה מבין 2.1 מיליון ₪ לבין מחיר החוזה. המשכנתה עד 75%
-// משווי זה, בכפוף למינימום הון עצמי: 60,000 ₪ אם יש מענק מקום, אחרת 100,000 ₪.
-const MORTGAGE_PRICE_CAP = 2_100_000;
-const MORTGAGE_LTV = 0.75;
-const MIN_EQUITY_WITH_GRANT = 60_000;
-const MIN_EQUITY_NO_GRANT = 100_000;
-
-// הערכת החזר חודשי - ריבית ממוצעת לדוגמה, לא הצעה מחייבת מבנק כלשהו.
-const MORTGAGE_INTEREST_RATE_PERCENT = 4.7;
-const MORTGAGE_TERM_YEARS = [20, 25, 30];
-
-const GRANT_OPTIONS = [
-  { value: 0, label: "אין מענק (0 ₪)" },
-  { value: 40_000, label: "40,000 ₪" },
-  { value: 60_000, label: "60,000 ₪" },
-];
+import {
+  DEFAULT_SIZES,
+  GRANT_OPTIONS,
+  MIN_EQUITY_NO_GRANT,
+  MIN_EQUITY_WITH_GRANT,
+  MORTGAGE_INTEREST_RATE_PERCENT,
+  MORTGAGE_TERM_YEARS,
+  PARKING_PRICE,
+  calculateLottery,
+  type ApartmentSize,
+  type LotteryInput,
+} from "@/lib/lottery-calc";
+import ReportRequest from "./report-request";
 
 const currency = new Intl.NumberFormat("he-IL", {
   maximumFractionDigits: 0,
@@ -154,29 +127,6 @@ function HelpTip({
   );
 }
 
-function calculateEquityAndMortgage(
-  contractPrice: number,
-  marketValue: number,
-  grant: number
-) {
-  const minEquity = grant > 0 ? MIN_EQUITY_WITH_GRANT : MIN_EQUITY_NO_GRANT;
-  const recognizedValue =
-    marketValue > MORTGAGE_PRICE_CAP
-      ? Math.max(MORTGAGE_PRICE_CAP, contractPrice)
-      : marketValue;
-  const mortgage = Math.max(
-    Math.min(MORTGAGE_LTV * recognizedValue, contractPrice - minEquity),
-    0
-  );
-  return { mortgage, equity: contractPrice - mortgage };
-}
-
-function calculateMonthlyPayment(principal: number, years: number) {
-  const monthlyRate = MORTGAGE_INTEREST_RATE_PERCENT / 100 / 12;
-  const numPayments = years * 12;
-  return (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-}
-
 export default function LotteryCalculator() {
   // נתוני ההגרלה - משתנים מהגרלה להגרלה
   const [pricePerSqm, setPricePerSqm] = useState<number>(0);
@@ -195,66 +145,31 @@ export default function LotteryCalculator() {
     setSizes((prev) => prev.map((s) => (s.id === id ? { ...s, mainSqm } : s)));
   };
 
-  const results = useMemo(() => {
-    const parkingCost = PARKING_PRICE * parkingCount;
-    const balconySqmEquivalent = balconySqm * BALCONY_FACTOR;
-    const storageSqmEquivalent = storageSqm * STORAGE_FACTOR;
-
-    return sizes.map((size) => {
-      const calcSqm = size.mainSqm + balconySqmEquivalent + storageSqmEquivalent;
-
-      const preDiscountExVat = calcSqm * pricePerSqm;
-      const preDiscountIncVat = preDiscountExVat * (1 + VAT_PERCENT / 100);
-
-      const trackA = (discountPercent / 100) * preDiscountIncVat;
-      const trackB = discountCap;
-      const discount = Math.min(trackA, trackB, preDiscountIncVat);
-      const boundBy = trackA <= trackB ? "א׳ (אחוז)" : "ב׳ (תקרה)";
-
-      const finalIncVat = preDiscountIncVat - discount;
-      const contractPrice = finalIncVat + parkingCost;
-
-      const marketValue =
-        referencePrice > 0
-          ? referencePrice * calcSqm * (1 + VAT_PERCENT / 100)
-          : preDiscountIncVat;
-
-      const { mortgage, equity } = calculateEquityAndMortgage(
-        contractPrice,
-        marketValue,
-        grant
-      );
-      const monthlyPayments = Object.fromEntries(
-        MORTGAGE_TERM_YEARS.map((years) => [
-          years,
-          calculateMonthlyPayment(mortgage, years),
-        ])
-      ) as Record<number, number>;
-
-      return {
-        size,
-        calcSqm,
-        preDiscountIncVat,
-        discount,
-        boundBy,
-        finalIncVat,
-        contractPrice,
-        equity,
-        mortgage,
-        monthlyPayments,
-      };
-    });
-  }, [
-    sizes,
-    pricePerSqm,
-    discountPercent,
-    discountCap,
-    referencePrice,
-    balconySqm,
-    storageSqm,
-    parkingCount,
-    grant,
-  ]);
+  const input = useMemo<LotteryInput>(
+    () => ({
+      sizes,
+      pricePerSqm,
+      discountPercent,
+      discountCap,
+      referencePrice,
+      balconySqm,
+      storageSqm,
+      parkingCount,
+      grant,
+    }),
+    [
+      sizes,
+      pricePerSqm,
+      discountPercent,
+      discountCap,
+      referencePrice,
+      balconySqm,
+      storageSqm,
+      parkingCount,
+      grant,
+    ]
+  );
+  const results = useMemo(() => calculateLottery(input), [input]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -510,6 +425,8 @@ export default function LotteryCalculator() {
           </a>
         </div>
       </section>
+
+      <ReportRequest input={input} ready={pricePerSqm > 0} />
 
       <p className="text-xs text-foreground/50">
         המחשבון הוא כלי עזר להערכה בלבד ואינו מהווה ייעוץ פיננסי. יש לבדוק

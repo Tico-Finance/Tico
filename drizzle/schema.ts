@@ -62,6 +62,7 @@ export const subscriberStatusEnum = pgEnum("subscriber_status", [
 export const subscriberSourceEnum = pgEnum("subscriber_source", [
   "csv_import",
   "manual",
+  "calculator",
 ]);
 
 export const emailSendStatusEnum = pgEnum("email_send_status", [
@@ -186,6 +187,12 @@ export const subscribers = pgTable("subscribers", {
     .notNull()
     .defaultNow(),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+  // Proof of opt-in for marketing email: when, and the exact wording shown.
+  consentAt: timestamp("consent_at", { withTimezone: true }),
+  consentText: text("consent_text"),
+  // Why the person left (optional, from the unsubscribe page).
+  unsubscribeReasons: text("unsubscribe_reasons").array(),
+  unsubscribeNote: text("unsubscribe_note"),
 });
 
 export const emailSends = pgTable("email_sends", {
@@ -520,6 +527,9 @@ export const leads = pgTable(
     postUrl: text("post_url"),
     name: text("name").notNull(),
     phone: text("phone"),
+    email: text("email"),
+    // Set only when the person ticked the marketing-email checkbox.
+    marketingConsentAt: timestamp("marketing_consent_at", { withTimezone: true }),
     topic: text("topic"),
     type: leadTypeEnum("type").notNull().default("other"),
     stage: leadStageEnum("stage").notNull().default("found"),
@@ -539,6 +549,28 @@ export const leads = pgTable(
   },
   (t) => [unique("leads_user_external_key_unique").on(t.userId, t.externalKey)]
 );
+
+// Discount coupons handed out with the calculator report. The number is a database
+// identity (sequential, cannot be skipped or invented); the verification code and the
+// download token are random, so a coupon can only be real if it exists in this table.
+export const coupons = pgTable("coupons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  number: integer("number").notNull().generatedAlwaysAsIdentity(),
+  // Printed on the coupon next to the number.
+  code: text("code").notNull(),
+  // Secret part of the download link.
+  token: text("token").notNull().unique(),
+  leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  // One coupon per email address.
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  discountPercent: integer("discount_percent").notNull().default(20),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 // Canva connection (OAuth tokens) per advisor, used by the content library.
 export const canvaConnections = pgTable("canva_connections", {

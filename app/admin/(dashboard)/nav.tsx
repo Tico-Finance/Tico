@@ -13,6 +13,7 @@ const MAIN = [
 const MORE = [
   { href: "/admin/routines", label: "הרגלים קבועים" },
   { href: "/admin/leads", label: "לידים" },
+  { href: "/admin/coupons", label: "קופונים" },
   { href: "/admin/progress", label: "השבוע שלי" },
   { href: "/admin/content", label: "מעקב תוכן" },
   { href: "/admin/plan", label: "תוכנית שנתית" },
