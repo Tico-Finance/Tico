@@ -13,7 +13,7 @@ import {
   normalizeIsraeliPhone,
 } from "@/lib/calculator-lead";
 import { renderReportPdf } from "@/lib/lottery-report-pdf";
-import { sendSingleEmail, unsubscribeLink } from "@/lib/resend";
+import { htmlFooter, sendSingleEmail, unsubscribeHeaders, unsubscribeLink } from "@/lib/resend";
 import { generateUnsubscribeToken, isValidEmail } from "@/lib/subscribers";
 
 // הורדת דוח PDF מהמחשבון הציבורי: שומר ליד, מנפיק קופון ממוספר, ושולח את הדוח
@@ -244,11 +244,8 @@ export async function POST(req: NextRequest) {
     const expires = coupon.expiresAt.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
 
     const footer = unsubscribeToken
-      ? `<hr style="margin-top:32px;border:none;border-top:1px solid #eee" />
-         <p style="font-size:12px;color:#888">קיבלת מייל זה כי אישרת קבלת תכנים מ-TICO FINANCE.
-         <a href="${unsubscribeLink(unsubscribeToken)}">להסרה מרשימת התפוצה</a></p>`
-      : `<hr style="margin-top:32px;border:none;border-top:1px solid #eee" />
-         <p style="font-size:12px;color:#888">מייל זה נשלח אליך בעקבות בקשתך לקבל את הדוח מהמחשבון באתר.</p>`;
+      ? htmlFooter(unsubscribeToken, "קיבלת מייל זה כי השארת פרטים וקיבלת את הדוח מהמחשבון באתר.")
+      : "";
 
     const html = `
       <div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;color:#26332b;line-height:1.7;max-width:560px">
@@ -275,6 +272,7 @@ export async function POST(req: NextRequest) {
       subject: "הדוח שלך מהמחשבון, ומחכה לך הפתעה",
       html,
       text,
+      headers: unsubscribeToken ? unsubscribeHeaders(unsubscribeToken) : undefined,
       attachments: [{ filename: "tico-finance-report.pdf", content: pdf }],
     });
   } catch (err) {

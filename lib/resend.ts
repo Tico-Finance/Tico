@@ -22,15 +22,26 @@ function unsubscribeUrl(token: string) {
   return `${appUrl}/unsubscribe?token=${token}`;
 }
 
-function htmlFooter(token: string) {
+// כפתור הסרה בכל מייל שנשלח לרשימה (וגם כותרת List-Unsubscribe, שמציגה
+// "הסר מנוי" בממשק של Gmail ואחרים).
+export function htmlFooter(
+  token: string,
+  reason = "קיבלת מייל זה כי היית בעבר בקשר עם העסק."
+) {
   const businessName = process.env.BUSINESS_NAME || "";
   return `
     <hr style="margin-top:32px;border:none;border-top:1px solid #eee" />
-    <p style="font-size:12px;color:#888;margin-top:12px">
+    <div dir="rtl" style="margin-top:12px;font-size:12px;color:#888;text-align:center">
       ${businessName ? `${businessName}<br/>` : ""}
-      קיבלת מייל זה כי היית בעבר בקשר עם העסק.
-      <a href="${unsubscribeUrl(token)}">להסרה מרשימת התפוצה</a>
-    </p>`;
+      ${reason}
+      <div style="margin-top:10px">
+        <a href="${unsubscribeUrl(token)}" style="display:inline-block;padding:8px 20px;border:1px solid #1f6b43;border-radius:999px;color:#1f6b43;text-decoration:none;font-size:13px;font-weight:bold">להסרה מרשימת התפוצה</a>
+      </div>
+    </div>`;
+}
+
+function unsubscribeHeaders(token: string) {
+  return { "List-Unsubscribe": `<${unsubscribeUrl(token)}>` };
 }
 
 function textFooter(token: string) {
@@ -88,6 +99,7 @@ export async function sendApprovedDraftEmail(draftEmailId: string) {
       from,
       to: s.email,
       subject,
+      headers: unsubscribeHeaders(s.unsubscribeToken),
       html: `${bodyHtml}${htmlFooter(s.unsubscribeToken)}`,
       text: bodyText ? `${bodyText}${textFooter(s.unsubscribeToken)}` : undefined,
     }));
@@ -139,6 +151,7 @@ export async function sendSingleEmail(opts: {
   html: string;
   text?: string;
   attachments?: { filename: string; content: Buffer }[];
+  headers?: Record<string, string>;
 }) {
   const from = process.env.RESEND_FROM_EMAIL;
   if (!from) {
@@ -153,6 +166,7 @@ export async function sendSingleEmail(opts: {
     html: opts.html,
     text: opts.text,
     attachments: opts.attachments,
+    headers: opts.headers,
   });
   if (error) throw new Error(error.message);
   return data?.id ?? null;
@@ -161,3 +175,5 @@ export async function sendSingleEmail(opts: {
 export function unsubscribeLink(token: string) {
   return unsubscribeUrl(token);
 }
+
+export { unsubscribeHeaders };
