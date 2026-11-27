@@ -302,6 +302,18 @@ function ReportDocument({
   );
 }
 
+// הקופון: תבנית שעוצבה ב-Canva (assets/coupon/coupon-template.png, בגודל 559x397)
+// והפרטים האישיים - מספר, קוד אימות, שם ותוקף - מודפסים עליה מהמערכת.
+const COUPON_TEMPLATE_PATH = path.join(process.cwd(), "assets/coupon/coupon-template.png");
+const COUPON_W = 559;
+const COUPON_H = 397;
+
+const couponStyles = StyleSheet.create({
+  page: { fontFamily: "Heebo", direction: "rtl" },
+  bg: { position: "absolute", left: 0, top: 0, width: COUPON_W, height: COUPON_H },
+  line: { position: "absolute", color: "#2e8b57", fontWeight: 700, textAlign: "center" },
+});
+
 function CouponDocument({
   name,
   coupon,
@@ -309,57 +321,25 @@ function CouponDocument({
   name: string;
   coupon: ReportCoupon;
 }) {
+  const shownName = name.length > 40 ? `${name.slice(0, 38)}…` : name;
   return (
     <Document title={`קופון הנחה ${formatCouponNumber(coupon.number)}`} author="TICO FINANCE">
-      <Page size="A5" orientation="landscape" style={styles.page}>
-        <Header title="קופון הנחה" subtitle="TICO FINANCE · אדריכל המשכנתאות" />
-        <View
-          style={{
-            borderWidth: 2,
-            borderColor: GREEN,
-            borderStyle: "dashed",
-            borderRadius: 8,
-            padding: 16,
-            backgroundColor: "#f3faf5",
-          }}
+      <Page size={[COUPON_W, COUPON_H]} style={couponStyles.page}>
+        {/* eslint-disable-next-line jsx-a11y/alt-text */}
+        <Image src={readFileSync(COUPON_TEMPLATE_PATH)} style={couponStyles.bg} />
+        <Text style={[couponStyles.line, { left: 260, width: 294, top: 263, fontSize: 13 }]}>
+          קופון מספר {formatCouponNumber(coupon.number)} · קוד אימות {coupon.code}
+        </Text>
+        <Text style={[couponStyles.line, { left: 260, width: 294, top: 282, fontSize: 10.5 }]}>
+          הונפק עבור: {shownName}
+        </Text>
+        <Text style={[couponStyles.line, { left: 284, width: 170, top: 371, fontSize: 9.5 }]}>
+          בתוקף עד {formatDate(coupon.expiresAt)}
+        </Text>
+        <Text
+          style={[couponStyles.line, { left: 270, width: 190, top: 384, fontSize: 6.5, fontWeight: 400 }]}
         >
-          <Text style={{ fontSize: 30, fontWeight: 700, color: GREEN, textAlign: "center" }}>
-            {coupon.discountPercent}% הנחה
-          </Text>
-          <Text style={{ fontSize: 13, textAlign: "center", marginTop: 2 }}>
-            על שירות ליווי משכנתא מלא
-          </Text>
-          <View
-            style={{
-              flexDirection: "row-reverse",
-              justifyContent: "space-around",
-              marginTop: 14,
-            }}
-          >
-            <View>
-              <Text style={{ fontSize: 8.5, color: MUTED, textAlign: "center" }}>מספר קופון</Text>
-              <Text style={{ fontSize: 15, fontWeight: 700, textAlign: "center" }}>
-                {formatCouponNumber(coupon.number)}
-              </Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 8.5, color: MUTED, textAlign: "center" }}>קוד אימות</Text>
-              <Text style={{ fontSize: 15, fontWeight: 700, textAlign: "center" }}>{coupon.code}</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 8.5, color: MUTED, textAlign: "center" }}>בתוקף עד</Text>
-              <Text style={{ fontSize: 15, fontWeight: 700, textAlign: "center" }}>
-                {formatDate(coupon.expiresAt)}
-              </Text>
-            </View>
-          </View>
-          <Text style={{ fontSize: 9.5, textAlign: "center", marginTop: 12 }}>
-            הונפק עבור: {name}
-          </Text>
-        </View>
-        <Text style={[styles.note, { textAlign: "center", marginTop: 10 }]}>
-          ההנחה חלה על שירות מלא בלבד. הקופון ממוספר ומאומת במערכת. למימוש, יש להציג את מספר הקופון וקוד
-          האימות בעת הפנייה, טלפון 050-7700322.
+          ההנחה חלה על שירות מלא בלבד · הקופון ממוספר ומאומת במערכת
         </Text>
       </Page>
     </Document>
